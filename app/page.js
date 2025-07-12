@@ -50,6 +50,17 @@ export default function Home() {
     router.push(`/room/${shortId}`);
   }
 
+  useEffect(() => {
+    if (fetchUser.isLoaded && user.id) {
+      supabase
+        .from('players')
+        .delete()
+        .eq('player_id', user.id)
+        .then(() => console.log('removed all records of user in players table'))
+        .catch((error) => console.log(error));
+    }
+  }, [fetchUser, user.id]);
+
 
   return (
 

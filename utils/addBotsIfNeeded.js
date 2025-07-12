@@ -8,7 +8,7 @@ export async function addBotsIfNeede(roomID,botCount){
         bots.push({
             room_id: roomID,
             name: `bot${i+1}`,
-            role: baseRoles[i % baseRoles.length],
+            role: 'villager',
             is_alive: true,
             vote_to: null,
             player_id: uuidv4(),

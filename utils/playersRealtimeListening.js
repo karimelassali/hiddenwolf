@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase"
 
-
-export async function roomsRealtimeListening(roomId,fetchRoomData){
+export async function playersRealtimeListening(roomId,fetchPlayers){
     const subscription = supabase
     .channel('players_channel')
     .on(
@@ -9,14 +8,14 @@ export async function roomsRealtimeListening(roomId,fetchRoomData){
         {
             event: '*',
             schema: 'public',
-            table: 'rooms',
-            filter: `code=eq.${roomId}`,  
+            table: 'players',
+            filter: `room_id=eq.${roomId}`,  
         
         },
         (payload)=>{
-            console.log('🚨 payload im from', payload);
+            console.log('🚨 payload im from ', payload);
 
-            fetchRoomData();
+            fetchPlayers();
         }
     )
     .subscribe();

@@ -4,11 +4,22 @@ import { useEffect , useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import {  roomsRealtimeListening } from '@/utils/roomsRealtimeListening'
 import GameNavbar  from '@/components/blocks/game-navbar'
+import GameActionsBar from '@/components/blocks/game-actions-bar'
+import { RolesModal } from '@/components/ui/rolesModal'
+import { useUser } from '@clerk/nextjs'
+import { playersRealtimeListening } from '@/utils/playersRealtimeListening'
+
 
 export default function Game({ params }) {
     const [roomId,setRoomId] = useState('');
     const [roomData,setRoomData] = useState({});
     const [players, setPlayers] = useState([]);
+    const fetchUser = useUser();
+    const [user, setUser] = useState(null);
+    const [role_preview, setRole_preview] = useState(false);
+    const [currentPlayer, setCurrentPlayer] = useState(null);
+    
+
 
     const dayBackground =  'http://localhost:3000/assets/images/day.png';
     const nightBackground = 'http://localhost:3000/assets/images/night.png';
@@ -17,6 +28,21 @@ export default function Game({ params }) {
      const resolvedParams = React.use(params);
     
         const {uid} =  resolvedParams;
+
+        useEffect(() => {
+            if (fetchUser.isLoaded) {
+                setUser(fetchUser.user);
+            }
+        }, [fetchUser]);
+
+        useEffect(() => {
+          if (user && players.length > 0) {
+              const foundPlayer = players.find(player => player.player_id === user.id);
+              if (foundPlayer) {
+                  setCurrentPlayer(foundPlayer);
+              }
+          }
+      }, [user, players]);
 
         const fetchRoomData = async () => {
             const {data : roomData,error} = await supabase.from('rooms')
@@ -100,10 +126,18 @@ export default function Game({ params }) {
 
         // Listen to changes in the room and fetch the new data
         useEffect(()=>{
-            roomsRealtimeListening(uid,fetchRoomData)
-        },[roomId])
+          if(uid && roomId){
+            roomsRealtimeListening(uid,fetchRoomData);
+            playersRealtimeListening(roomId,fetchPlayers);
+          }
+        },[uid,roomId])
+        useEffect(()=>{
+          setRole_preview(true);
+        },[roomData.roles_assigned])
+
   return (
     <>
+    
     <GameNavbar uid={uid}/>
     <div className="flex w-full justify-between flex-col md:flex-row gap-4">
       
@@ -143,18 +177,16 @@ export default function Game({ params }) {
             </div>
           ))}
         </div>
-      
+        <div className=" flex justify-center items-center">
+          {role_preview && roomData.roles_assigned && <RolesModal role={players.find(player => player.player_id === user?.id)?.role} />}
+          {
+            roomData.roles_assigned && setTimeout(() => {
+              setRole_preview(false);
+            }, 5000)
+          }
+        </div>
 
-        {roomData.roles_assigned === false && (
-          <div className="mt-4">
-            <button
-              onClick={ApplyingRoles}
-              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md"
-            >
-              Shuffle Roles
-            </button>
-          </div>
-        )}
+       
       </section>
       <div className="chat">
             <div className="chat-header">
@@ -162,6 +194,21 @@ export default function Game({ params }) {
             </div>
         </div>
     </div>
+     {roomData.roles_assigned === false && roomData.host_id === user.id && (
+        <div className="mt-4">
+          <button
+            onClick={ApplyingRoles}
+            className="bg-blue-500 hover:bg-blue-700 text-white hover:bg-red-300 z-50 font-bold py-2 px-4 rounded-md"
+          >
+            Shuffle Roles
+          </button>
+        </div>
+      )}
+          <GameActionsBar 
+            roomId={roomId} 
+            roomInfo={roomData} 
+            playerInfo={currentPlayer} 
+          />
     </>
   );
 }

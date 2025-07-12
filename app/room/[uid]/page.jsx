@@ -148,6 +148,7 @@ export default function Room({params}) {
     )
     .subscribe();
     return () => {
+        supabase.removeChannel(roomsSubscription);
         supabase.removeChannel(subscription);
         }
     },[roomId])
@@ -226,8 +227,8 @@ export default function Room({params}) {
                                             console.log(error);
                                         }
                                     } else {
-                                        if(players.length < 4){
-                                            addBotsIfNeede(roomId,4);   
+                                        if(players.length < 3){
+                                            addBotsIfNeede(roomId, 4 - players.length);   
                                         }
                                         
                                         const { data, error } = await supabase
