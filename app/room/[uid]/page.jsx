@@ -45,44 +45,84 @@ export default function Room({params}) {
         setRoomId(roomData?.id);
         setRoomData(roomData);
     }
-    useEffect(() => {
-
-        const addPlayer = async () => {
-            try {
-                fetchRoomData();
-                if(user.fullName && roomId){
-                const { data: existingPlayers } = await supabase
-                .from('players')
-                .select('id')
-                .eq('room_id', roomId)
-                .eq('player_id', user.id);
-
   
-                if (existingPlayers && existingPlayers.length > 0) {
-                    console.log('🟡 Player already exists, skipping insert');
-                    return;
+    const addPlayer = async () => {
+        if (!user.fullName || !roomId) return;
+    
+        try {
+            await fetchRoomData();
+            
+            // First, check if player exists in any room
+            const { data: existingPlayer, error: findError } = await supabase
+                .from('players')
+                .select('id, room_id')
+                .eq('player_id', user.id)
+                .maybeSingle();
+    
+            if (findError) throw findError;
+    
+            const playerData = {
+                room_id: roomId,
+                name: user.fullName,
+                role: null,
+                is_alive: true,
+                vote_to: null,
+                player_id: user.id,
+                last_seen: new Date().toISOString()
+            };
+    
+            if (existingPlayer) {
+                // If player exists in a different room, delete the old record
+                if (existingPlayer.room_id !== roomId) {
+                    const { error: deleteError } = await supabase
+                        .from('players')
+                        .delete()
+                        .eq('id', existingPlayer.id);
+                    
+                    if (deleteError) throw deleteError;
+                    console.log('🗑️ Removed player from previous room');
+                    
+                    // Insert new record in the new room
+                    const { error: insertError } = await supabase
+                        .from('players')
+                        .insert(playerData);
+                    
+                    if (insertError) throw insertError;
+                    console.log('✅ Player moved to new room');
+                } else {
+                    // Update existing player in the same room
+                    const { error: updateError } = await supabase
+                        .from('players')
+                        .update(playerData)
+                        .eq('id', existingPlayer.id);
+                    
+                    if (updateError) throw updateError;
+                    console.log('🔄 Player updated in room');
                 }
-                }
-
-        if(roomId && user.fullName){
-            supabase.from('players').upsert({'room_id': roomId, 'name': user.fullName,role:'wolf',is_alive:true,vote_to:null,'player_id':user.id},{
-               onConflict:'player_id'
-            })
-            .then(() => {
-                console.log('Player added to room');
-            })
-            .catch((error) => {
-                console.log(error);
-            })
-        }
-            } catch (error) {
-                console.log(error);
+            } else {
+                // Insert new player
+                const { error: insertError } = await supabase
+                    .from('players')
+                    .insert(playerData);
+                
+                if (insertError) throw insertError;
+                console.log('✅ New player added to room');
             }
+        } catch (error) {
+            console.error('Error in addPlayer:', error);
         }
-        addPlayer();
-       
+    };
 
-    },[user.fullName,roomId])
+
+    useEffect(() => {
+        const initialize = async () => {
+            if (user.fullName) {
+                await fetchRoomData();
+                await addPlayer();
+            }   
+        };
+        initialize();
+    }, [user.fullName, roomId]);
 
     useEffect(()=>{ 
         if (!roomId){
@@ -169,7 +209,7 @@ export default function Room({params}) {
                 await supabase.from('players').delete().in('id', ids);
                 console.log('🧹 removed inactive players:', ids);
                 }
-        },10000)
+        },5000)
         return () => clearInterval(interval);
        
     },[roomId,user.id])
@@ -227,9 +267,9 @@ export default function Room({params}) {
                                             console.log(error);
                                         }
                                     } else {
-                                        if(players.length < 3){
-                                            addBotsIfNeede(roomId, 4 - players.length);   
-                                        }
+                                        
+                                            addBotsIfNeede(roomId, 4 - players.length)
+                                        
                                         
                                         const { data, error } = await supabase
                                             .from('rooms')

@@ -2,15 +2,15 @@ import { supabase } from "@/lib/supabase"
 
 
 export async function roomsRealtimeListening(roomId,fetchRoomData){
-    const subscription = supabase
-    .channel('players_channel')
+    console.log('room id',roomId);
+    const subscription = await supabase
+    .channel('room_listening_channel')
     .on(
         'postgres_changes',
         {
             event: '*',
             schema: 'public',
             table: 'rooms',
-            filter: `code=eq.${roomId}`,  
         
         },
         (payload)=>{
@@ -20,4 +20,7 @@ export async function roomsRealtimeListening(roomId,fetchRoomData){
         }
     )
     .subscribe();
+    return () => {
+        subscription.unsubscribe();
+    };
 }

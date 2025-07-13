@@ -1,4 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import {NetworkTracking} from '@/components/networkTracking'
+
 import "./globals.css";
 import {
   ClerkProvider,
@@ -21,7 +23,8 @@ export default function RootLayout({ children }) {
       <body
         className={` antialiased h-full`}
       >
-         <header className="flex justify-end items-center p-4 gap-4 h-16">
+         <header className="flex justify-end items-center p-4 gap-4 h-16"> 
+          <NetworkTracking />
             <SignedOut>
               <SignInButton />
               <SignUpButton>
@@ -35,6 +38,7 @@ export default function RootLayout({ children }) {
             </SignedIn>
           </header>
         {children}
+       
       </body>
     </html>
     </ClerkProvider>

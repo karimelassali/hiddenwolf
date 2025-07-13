@@ -2,12 +2,12 @@
 import React from 'react'
 import { useEffect , useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import {  roomsRealtimeListening } from '@/utils/roomsRealtimeListening'
 import GameNavbar  from '@/components/blocks/game-navbar'
 import GameActionsBar from '@/components/blocks/game-actions-bar'
 import { RolesModal } from '@/components/ui/rolesModal'
 import { useUser } from '@clerk/nextjs'
-import { playersRealtimeListening } from '@/utils/playersRealtimeListening'
+import {NetworkTracking} from '@/components/networkTracking'
+
 
 
 export default function Game({ params }) {
@@ -117,29 +117,80 @@ export default function Game({ params }) {
                 }
             }
         }
-        
+
+
         useEffect(()=>{
-            fetchRoomData();
+          fetchRoomData();
+        },[uid])
+
+        useEffect(()=>{
             fetchPlayers();
-        },[roomId])
+          
+          },[roomId])
 
 
         // Listen to changes in the room and fetch the new data
+
         useEffect(()=>{
-          if(uid && roomId){
-            roomsRealtimeListening(uid,fetchRoomData);
-            playersRealtimeListening(roomId,fetchPlayers);
-          }
-        },[uid,roomId])
-        useEffect(()=>{
+          roomsRealtimeListening(roomId,fetchRoomData);
+          playersRealtimeListening(roomId,fetchPlayers);
+        },[roomId])
+
+       
+        
+          
+        
+      useEffect(() => {
+        if (!roomData.roles_assigned || !players || !user?.id) return;
+      
+        const currentPlayer = players.find(player => player.player_id === user.id);
+        if (currentPlayer?.role) {
           setRole_preview(true);
-        },[roomData.roles_assigned])
+        }
+      }, [roomData.roles_assigned, players, user?.id]);
+
+       
+
 
   return (
     <>
-    
-    <GameNavbar uid={uid}/>
+    {
+      roomData.roles_assigned && (
+        <GameNavbar roomData={roomData} uid={uid} currentPlayerId={currentPlayer && currentPlayer.player_id}/>
+      )
+    }
+    {/* {JSON.stringify(currentPlayer)} */}
     <div className="flex w-full justify-between flex-col md:flex-row gap-4">
+   
+
+      {
+        !roomData.roles_assigned && user?.id === roomData.host_id ? (
+          <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-8 shadow-lg">
+              {!roomData.roles_assigned && user?.id === roomData.host_id && (
+                <button
+                  onClick={ApplyingRoles}
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
+                >
+                  Apply Roles 
+                </button>
+              )}
+            </div>
+          </div>
+        ):
+        
+          !roomData.roles_assigned && user?.id !== roomData.host_id && (
+            <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+              <div className="bg-white rounded-lg p-8 shadow-lg">
+                <p className="text-center font-bold">
+                  Waiting for the host to assign roles...
+                </p>
+              </div>
+            </div>
+          )
+        
+
+      }
       
       <section className="w-50 bg-red-300  px-4">
         <h2 className="text-2xl font-bold mb-4">Players</h2>
@@ -148,7 +199,8 @@ export default function Game({ params }) {
                 <ul className="list-disc pl-4">
                 {players.map(player => (
                     <li key={player.id} className="my-2">
-                    <span className="font-bold">{player.name}</span> - {player.role}
+                    <span className="font-bold">{player.name}</span> - {player.role} - {player.is_alive ? ('alive') : ('dead')}
+
                     </li>
                 ))}
                 </ul>
@@ -178,14 +230,14 @@ export default function Game({ params }) {
           ))}
         </div>
         <div className=" flex justify-center items-center">
-          {role_preview && roomData.roles_assigned && <RolesModal role={players.find(player => player.player_id === user?.id)?.role} />}
+          {role_preview && roomData.roles_assigned && players.find(player => player.player_id === user?.id) && <RolesModal role={players.find(player => player.player_id === user?.id)?.role} />}
           {
             roomData.roles_assigned && setTimeout(() => {
               setRole_preview(false);
             }, 5000)
+            
           }
         </div>
-
        
       </section>
       <div className="chat">
@@ -194,21 +246,63 @@ export default function Game({ params }) {
             </div>
         </div>
     </div>
-     {roomData.roles_assigned === false && roomData.host_id === user.id && (
-        <div className="mt-4">
-          <button
-            onClick={ApplyingRoles}
-            className="bg-blue-500 hover:bg-blue-700 text-white hover:bg-red-300 z-50 font-bold py-2 px-4 rounded-md"
-          >
-            Shuffle Roles
-          </button>
-        </div>
-      )}
           <GameActionsBar 
             roomId={roomId} 
             roomInfo={roomData} 
             playerInfo={currentPlayer} 
+            players={players}
           />
     </>
   );
 }
+
+
+function roomsRealtimeListening(roomId,fetchRoomData){
+  console.log('room id',roomId);
+  const subscription =  supabase
+  .channel('room_listening_channel')
+  .on(
+      'postgres_changes',
+      {
+          event: '*',
+          schema: 'public',
+          table: 'rooms',
+          //i should make a filter here
+      
+      },
+      (payload)=>{
+          console.log('🚨 payload im from', payload);
+          fetchRoomData();
+      }
+  )
+  .subscribe();
+  return () => {
+      subscription.unsubscribe();
+  };
+}
+
+
+function playersRealtimeListening(roomId,fetchPlayers){
+  console.log('room id',roomId);
+  const subscription =  supabase
+  .channel('players_listening_channel')
+  .on(
+      'postgres_changes',
+      {
+          event: '*',
+          schema: 'public',
+          table: 'players',
+      
+      },
+      (payload)=>{
+          console.log('🚨 payload im from pla', payload);
+          fetchPlayers();
+      }
+  )
+  .subscribe();
+  return () => {
+      subscription.unsubscribe();
+  };
+}
+
+
