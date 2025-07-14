@@ -1,13 +1,15 @@
 'use client'
 import React from 'react'
+import dynamic from 'next/dynamic';
+
 import { useEffect , useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import GameNavbar  from '@/components/blocks/game-navbar'
 import GameActionsBar from '@/components/blocks/game-actions-bar'
 import { RolesModal } from '@/components/ui/rolesModal'
 import { useUser } from '@clerk/nextjs'
-import {NetworkTracking} from '@/components/networkTracking'
 
+const StageResult = dynamic(()=>import('@/components/ui/stageResult'),{ssr:false});
 
 
 export default function Game({ params }) {
@@ -18,6 +20,7 @@ export default function Game({ params }) {
     const [user, setUser] = useState(null);
     const [role_preview, setRole_preview] = useState(false);
     const [currentPlayer, setCurrentPlayer] = useState(null);
+    const [stageResultModal,setStageResultModal] = useState(false);
     
 
 
@@ -147,21 +150,38 @@ export default function Game({ params }) {
         if (currentPlayer?.role) {
           setRole_preview(true);
         }
-      }, [roomData.roles_assigned, players, user?.id]);
+      }, [roomData.roles_assigned, players.role, user?.id]);
 
-       
+       useEffect(()=>{
+        if(roomData.stage === 'day'){
+          setStageResultModal(true);
+          setTimeout(()=>{
+            setStageResultModal(false);
+          },5000)
+        }
+
+       },[roomData.stage])
 
 
   return (
     <>
     {
-      roomData.roles_assigned && (
+      roomData.roles_assigned && currentPlayer &&(
         <GameNavbar roomData={roomData} uid={uid} currentPlayerId={currentPlayer && currentPlayer.player_id}/>
       )
     }
     {/* {JSON.stringify(currentPlayer)} */}
     <div className="flex w-full justify-between flex-col md:flex-row gap-4">
-   
+
+      //Players voted 
+    {
+      
+      roomData.stage !== null && (
+        players.filter(player =>    player.vote_to !== null).map(player => (
+          <p className="text-lg">Player {player.name} voted for {players.find(p => p.id === player.vote_to)?.name}</p>
+        ))
+      )
+    }
 
       {
         !roomData.roles_assigned && user?.id === roomData.host_id ? (
@@ -193,6 +213,7 @@ export default function Game({ params }) {
       }
       
       <section className="w-50 bg-red-300  px-4">
+        
         <h2 className="text-2xl font-bold mb-4">Players</h2>
         {
             roomData.roles_assigned ? (
@@ -203,6 +224,7 @@ export default function Game({ params }) {
 
                     </li>
                 ))}
+               
                 </ul>
             ):(
                 <p>No roles assigned yet</p>
@@ -252,6 +274,21 @@ export default function Game({ params }) {
             playerInfo={currentPlayer} 
             players={players}
           />
+          {
+            
+            stageResultModal && <StageResult result={players.filter(p => !p.is_alive).length >= players.length }  players={players} status={players.filter(p => !p.is_alive).length >= players.length  / 3 ? 'Wolf won' : 'Still chance'} />
+          }
+          {
+            currentPlayer?.is_alive ? (
+              <h1>
+                You aare alive
+              </h1>
+            ):(
+              <h1>
+                You are dead
+              </h1>
+            )
+          }
     </>
   );
 }

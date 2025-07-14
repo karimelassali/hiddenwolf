@@ -62,7 +62,7 @@ export function NetworkTracking() {
   useEffect(() => {
     testNetworkSpeed();
 
-    const interval = setInterval(testNetworkSpeed, 10000);
+    const interval = setInterval(testNetworkSpeed, 20000);
 
     window.addEventListener('online', testNetworkSpeed);
     window.addEventListener('offline', () => setStatus('offline'));

@@ -9,6 +9,7 @@ export default function GameActionsBar({roomId,roomInfo,playerInfo,players}) {
     
     return (
         <div className="flex items-center justify-between gap-5 bg-purple-600 p-5">
+            
             <PlayerActions currentPlayer={playerInfo} roomInfo={roomInfo} players={players} onAction={onAction}/>
         </div>
     )

@@ -26,7 +26,7 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
         //Update room wolf killed row
         const {error:wolfKilledError} = await supabase.from('rooms')
         .update({wolf_killed:true})
-        .eq('room_id',roomInfo?.id);
+        .eq('id',roomInfo?.id);
 
         if(error){
             console.log(error);
@@ -36,14 +36,25 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
         console.log('player killed' + player.name);
         setOpen(false);
     }
+
+    const voting = async  (player)=>{
+        const {error} = await supabase.from('players')
+        .update({vote_to:player.id})
+        .eq('id',currentPlayer.id);
+        if(error){
+            console.log(error);
+        }
+        console.log('voting updated');
+        setOpen(false);
+    }
     return (
         <div className="flex flex-col gap-2">
             <Drawer>
                 {
-                    currentPlayer && (
+                    currentPlayer &&  currentPlayer.is_alive && (
                         <DrawerTrigger>
                         {
-                            currentPlayer?.role === 'wolf' && (roomInfo.stage === 'night' ? (
+                            currentPlayer?.role === 'wolf' && !roomInfo.wolf_killed && (roomInfo.stage === 'night' ? (
                                 <Button variant="destructive" onClick={() => setOpen(true)}>Kill</Button>
                             )
                             : (
@@ -80,28 +91,63 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
                     <div className="grid grid-cols-3 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {players && players.filter(player => player.role != 'wolf').map((player) => (
                             <div key={player.id} className="bg-white dark:bg-input/30 p-4 rounded-md shadow-sm">
-                                <h3 className="text-lg font-semibold">{player.name}</h3>
-                                {
-                                    currentPlayer  && roomInfo.stage === 'night' && (
+                               {
+                                player.is_alive ? (
+                                    <>
+                                    {currentPlayer?.role === 'wolf' && roomInfo.stage === 'night' && !roomInfo.wolf_killed && (
                                         <Button
-                                        variant={currentPlayer.role === 'wolf' ? 'kill' : 'outline'}
+                                        variant="kill"
                                         onClick={() => killPlayer(player)}
-                                    >
-                                        {currentPlayer.role === 'wolf' && 'Kill'}
-                                        {currentPlayer.role === 'seer' && 'See'}
-                                        {currentPlayer.role === 'doctor' && 'Save'}
-                                        {currentPlayer.role === 'villager' && 'Vote'}
-                                    </Button>
-                                    )
+                                        >
+                                        Kill
+                                        </Button>
+                                    )}
+
+                                    {currentPlayer?.role === 'seer' && roomInfo.stage === 'night' && (
+                                        <Button
+                                        variant="outline"
+                                        onClick={() => onAction(player)}
+                                        >
+                                        See
+                                        </Button>
+                                    )}
+
+                                    {currentPlayer?.role === 'doctor' && roomInfo.stage === 'night' && (
+                                        <Button
+                                        variant="outline"
+                                        onClick={() => onAction(player)}
+                                        >
+                                        Save
+                                        </Button>
+                                    )}
+                                    </>
+                                ) : (
+                                    <p>dead</p>
+                                )
                                 }
+
+                                <h3 className="text-lg font-semibold">{player.name}</h3>
+                               
                                 {
-                                    currentPlayer  && roomInfo.stage === 'day' && (
+                                    currentPlayer?.role === 'villager' && roomInfo.stage === 'day' && (
                                         <Button
                                         variant="outline"
                                         onClick={() => onAction(player)}
                                     >
                                         Vote
                                     </Button>
+                                    )
+                                }
+                                 {
+                                    currentPlayer && 
+                                    roomInfo.stage === 'day' && 
+                                    (
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => voting(player)}
+                                        >
+                                            Vote
+                                        </Button>
                                     )
                                 }
                                
