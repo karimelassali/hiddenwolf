@@ -96,11 +96,7 @@ export function NetworkTracking() {
     >
       <span style={{ fontSize: '18px' }}>{icon}</span>
       <span style={{ fontWeight: '600', color }}>{label}</span>
-      {lastChecked && (
-        <span style={{ fontSize: '12px', color: '#9ca3af', marginLeft: '8px' }}>
-          Last checked: {lastChecked.toLocaleTimeString()}
-        </span>
-      )}
+     
     </div>
   );
 }

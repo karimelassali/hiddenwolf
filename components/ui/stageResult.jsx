@@ -13,8 +13,7 @@ export default function StageResult({ result, players, status }) {
         height={200}
       />
       <ul className="flex flex-col gap-2">
-        {status}
-        {result}
+        {status ? result : "You died by the wolf"}
           {
             players.filter(p => !p.is_alive ).map((player) => (
               <li className="flex items-center gap-2">

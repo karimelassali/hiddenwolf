@@ -21,6 +21,7 @@ export default function Game({ params }) {
     const [role_preview, setRole_preview] = useState(false);
     const [currentPlayer, setCurrentPlayer] = useState(null);
     const [stageResultModal,setStageResultModal] = useState(false);
+    const [votingData,setVotingData] = useState([]);
     
 
 
@@ -79,6 +80,17 @@ export default function Game({ params }) {
 
         }
 
+
+        const fetchVotingData = async()=>{
+          const {data,error} = await supabase.from('voting').select('*').eq('room_id',roomId);
+          if(error){
+            console.log(error);
+          }
+          if(data){
+            setVotingData(data);
+          }
+        }
+
         const ApplyingRoles = async () => {
             const baseRoles = ['wolf', 'seer', 'doctor'];
 
@@ -128,8 +140,9 @@ export default function Game({ params }) {
 
         useEffect(()=>{
             fetchPlayers();
-          
+            fetchVotingData();
           },[roomId])
+
 
 
         // Listen to changes in the room and fetch the new data
@@ -137,6 +150,7 @@ export default function Game({ params }) {
         useEffect(()=>{
           roomsRealtimeListening(roomId,fetchRoomData);
           playersRealtimeListening(roomId,fetchPlayers);
+          votingRealtimeListening(roomId,fetchVotingData);
         },[roomId])
 
        
@@ -153,7 +167,7 @@ export default function Game({ params }) {
       }, [roomData.roles_assigned, players.role, user?.id]);
 
        useEffect(()=>{
-        if(roomData.stage === 'day'){
+        if(roomData.stage === 'day' && roomData.wolf_killed){
           setStageResultModal(true);
           setTimeout(()=>{
             setStageResultModal(false);
@@ -162,9 +176,78 @@ export default function Game({ params }) {
 
        },[roomData.stage])
 
+       //Fetching the voting data from voting table
+     
+       
+       
+
 
   return (
     <>
+    
+    <div className="flex gap-2">
+      <button
+        onClick={async () => {
+          await supabase
+            .from('players')
+            .update({ role: 'wolf' })
+            .eq('id', currentPlayer?.id)
+            ;
+        }}
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
+      >
+        Make me wolf
+      </button>
+      <button
+        onClick={async () => {
+          await supabase
+            .from('players')
+            .update({ role: 'seer' })
+            .eq('id', currentPlayer?.id)
+            ;
+        }}
+        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full"
+      >
+        Make me seer
+      </button>
+      <button
+        onClick={async () => {
+          await supabase
+            .from('players')
+            .update({ role: 'villager' })
+            .eq('id', currentPlayer?.id)
+            ;
+        }}
+        className="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-full"
+      >
+        Make me villager
+      </button>
+      <button
+        onClick={async () => {
+          await supabase
+            .from('players')
+            .update({ role: 'doctor' })
+            .eq('id', currentPlayer?.id)
+            ;
+        }}
+        className="bg-indigo-500 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-full"
+      >
+        Make me doctor
+      </button>
+      <button
+        onClick={async () => {
+          await supabase
+            .from('players')
+            .update({ is_alive: true })
+            .eq('id', currentPlayer?.id)
+            ;
+        }}
+        className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full"
+      >
+        Make me alive
+      </button>
+      
+    </div>
     {
       roomData.roles_assigned && currentPlayer &&(
         <GameNavbar roomData={roomData} uid={uid} currentPlayerId={currentPlayer && currentPlayer.player_id}/>
@@ -177,8 +260,8 @@ export default function Game({ params }) {
     {
       
       roomData.stage !== null && (
-        players.filter(player =>    player.vote_to !== null).map(player => (
-          <p className="text-lg">Player {player.name} voted for {players.find(p => p.id === player.vote_to)?.name}</p>
+        votingData.map(player => (
+          <p className="text-lg">Player {player.voter_name} voted for {player.voted_name}</p>
         ))
       )
     }
@@ -267,6 +350,8 @@ export default function Game({ params }) {
                 <h2 className="text-lg font-bold">Chat</h2>
             </div>
         </div>
+        
+
     </div>
           <GameActionsBar 
             roomId={roomId} 
@@ -276,7 +361,12 @@ export default function Game({ params }) {
           />
           {
             
-            stageResultModal && <StageResult result={players.filter(p => !p.is_alive).length >= players.length }  players={players} status={players.filter(p => !p.is_alive).length >= players.length  / 3 ? 'Wolf won' : 'Still chance'} />
+            stageResultModal && <StageResult result={players.filter(p => !p.is_alive).length >= players.length  / 3 ? 'Wolf won' : 'Still chance'}  players={players} status={currentPlayer?.is_alive} />
+          }
+          {
+            // !currentPlayer.is_alive && (
+
+            // )
           }
           {
             currentPlayer?.is_alive ? (
@@ -334,6 +424,31 @@ function playersRealtimeListening(roomId,fetchPlayers){
       (payload)=>{
           console.log('🚨 payload im from pla', payload);
           fetchPlayers();
+      }
+  )
+  .subscribe();
+  return () => {
+      subscription.unsubscribe();
+  };
+}
+
+
+
+function votingRealtimeListening(roomId,fetchVotingData){
+  console.log('room id',roomId);
+  const subscription =  supabase
+  .channel('voting_listening_channel')
+  .on(
+      'postgres_changes',
+      {
+          event: '*',
+          schema: 'public',
+          table: 'voting',
+      
+      },
+      (payload)=>{
+          console.log('🚨 payload im from pla', payload);
+          fetchVotingData();
       }
   )
   .subscribe();

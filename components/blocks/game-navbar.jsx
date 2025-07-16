@@ -7,13 +7,31 @@ import { supabase } from "@/lib/supabase";
 
 
 import { Countdown } from "@/components/ui/countdown";
+import { Vote } from "lucide-react";
 
 export default function GameNavbar({uid,roomData,currentPlayerId}) {
     const [counter,setCounter] = useState(5);
 
 
     const onCountDownFinished = async()=>{
-        console.log(roomData)
+
+
+        //Reset that is_action_done to false to all players in the room exept the seer
+        const {error} = await supabase.from('players')
+        .update({is_action_done:false,is_saved:false})
+        .eq('room_id',roomData.id)
+        if(error){
+            console.log(error);
+        }
+        //Reset voting table
+        const {error:votingError} = await supabase.from('voting')
+        .delete()
+        .eq('room_id',roomData.id)
+        if(votingError){
+            console.log(votingError);
+        }
+
+
         if(roomData.host_id == currentPlayerId){
             if(roomData.stage== 'night'){
                 const {error} = await supabase.from('rooms')
@@ -47,6 +65,8 @@ export default function GameNavbar({uid,roomData,currentPlayerId}) {
         }
         
     }
+
+
   return (
     <nav className='w-full p-5 flex justify-between items-center bg-[#6c47ff] text-white'>
 
