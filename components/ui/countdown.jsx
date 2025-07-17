@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export const Countdown = ({ number = 50, target, usage, onComplete }) => {
+export const Countdown = ({ number = 10, target, usage, onComplete }) => {
   const [timeLeft, setTimeLeft] = useState(number);
   const router = useRouter();
 

@@ -8,6 +8,8 @@ import GameNavbar  from '@/components/blocks/game-navbar'
 import GameActionsBar from '@/components/blocks/game-actions-bar'
 import { RolesModal } from '@/components/ui/rolesModal'
 import { useUser } from '@clerk/nextjs'
+import { toast, Toaster } from 'react-hot-toast';
+import {kill,seePlayer,savePlayer} from '@/utils/botsActions'
 
 const StageResult = dynamic(()=>import('@/components/ui/stageResult'),{ssr:false});
 
@@ -22,6 +24,8 @@ export default function Game({ params }) {
     const [currentPlayer, setCurrentPlayer] = useState(null);
     const [stageResultModal,setStageResultModal] = useState(false);
     const [votingData,setVotingData] = useState([]);
+    const [winner,setWinner] = useState('');
+    const [winnerModal,setWinnerModal] = useState(false);
     
 
 
@@ -81,15 +85,7 @@ export default function Game({ params }) {
         }
 
 
-        const fetchVotingData = async()=>{
-          const {data,error} = await supabase.from('voting').select('*').eq('room_id',roomId);
-          if(error){
-            console.log(error);
-          }
-          if(data){
-            setVotingData(data);
-          }
-        }
+        
 
         const ApplyingRoles = async () => {
             const baseRoles = ['wolf', 'seer', 'doctor'];
@@ -134,15 +130,55 @@ export default function Game({ params }) {
         }
 
 
+        const runBotsActions = ()=>{
+          if(roomData && players && currentPlayer && currentPlayer.player_id == roomData.host_id){
+
+            const bots = players.filter(p => !p.is_human);
+
+            if(roomData.stage == 'day'){
+              
+            }
+            if(roomData.stage == 'night'){
+
+              console.log('bots',bots);
+              bots.forEach(async (bot) => {
+                if (bot.is_action_done) return;
+              
+                const alivePlayers = players.filter(p => p.is_alive && p.id !== bot.id);
+                const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+              
+                setTimeout(async () => {
+                  if (roomData.stage === 'night') {
+                    if (bot.role === 'wolf') {
+                      await kill(bot, randomTarget);
+                    } else if (bot.role === 'seer') {
+                      await seePlayer(bot, randomTarget);
+                    } else if (bot.role === 'doctor') {
+                      await savePlayer(bot, randomTarget);
+                    }
+              
+                    // ✅ Mark bot action as done
+                    await supabase.from('players').update({ is_action_done: true }).eq('id', bot.id);
+                  }
+                }, Math.floor(Math.random() * 5000));
+              });
+              
+            }
+          }
+        }
+
+        useEffect(()=>{
+          runBotsActions();
+        },[roomData.stage,currentPlayer])
+
+        
         useEffect(()=>{
           fetchRoomData();
         },[uid])
 
         useEffect(()=>{
             fetchPlayers();
-            fetchVotingData();
           },[roomId])
-
 
 
         // Listen to changes in the room and fetch the new data
@@ -150,7 +186,7 @@ export default function Game({ params }) {
         useEffect(()=>{
           roomsRealtimeListening(roomId,fetchRoomData);
           playersRealtimeListening(roomId,fetchPlayers);
-          votingRealtimeListening(roomId,fetchVotingData);
+          // votingRealtimeListening(roomId,fetchVotingData);
         },[roomId])
 
        
@@ -171,7 +207,15 @@ export default function Game({ params }) {
           setStageResultModal(true);
           setTimeout(()=>{
             setStageResultModal(false);
-          },5000)
+          },3000)
+          
+        }
+
+        if(roomData.stage === 'day' && players.filter(player => player.is_alive).length === 1){
+          setWinnerModal(true);
+          setWinner('Wolf won');
+        }else{
+          setWinner('Villager won');
         }
 
        },[roomData.stage])
@@ -184,8 +228,11 @@ export default function Game({ params }) {
 
   return (
     <>
-    
+     <Toaster />
     <div className="flex gap-2">
+      <button onClick={()=>toast('Here is your toast.')}>Make me a toast</button>
+     
+
       <button
         onClick={async () => {
           await supabase
@@ -361,12 +408,10 @@ export default function Game({ params }) {
           />
           {
             
-            stageResultModal && <StageResult result={players.filter(p => !p.is_alive).length >= players.length  / 3 ? 'Wolf won' : 'Still chance'}  players={players} status={currentPlayer?.is_alive} />
+            stageResultModal && <StageResult result={players.filter(p => p.is_alive).length === 1 ? 'Wolf won' : 'Still chance'}  players={players} status={currentPlayer?.is_alive} />
           }
           {
-            // !currentPlayer.is_alive && (
-
-            // )
+           winnerModal && <WinnerModal winner={winner}/>
           }
           {
             currentPlayer?.is_alive ? (
@@ -382,6 +427,23 @@ export default function Game({ params }) {
     </>
   );
 }
+
+
+
+
+export function WinnerModal({winner}) {
+  return (
+    <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 z-10 flex items-center justify-center">
+      <div className="bg-white p-4 rounded-lg"> 
+        Game Ended .
+        <h1 className="text-2xl font-bold">{winner}</h1>
+        <p className="text-lg">{winner}</p>
+        <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => window.location.href = '/'}>Go back to home</button>
+      </div>
+    </div>
+    
+  );
+};
 
 
 function roomsRealtimeListening(roomId,fetchRoomData){
@@ -434,27 +496,29 @@ function playersRealtimeListening(roomId,fetchPlayers){
 
 
 
-function votingRealtimeListening(roomId,fetchVotingData){
-  console.log('room id',roomId);
-  const subscription =  supabase
-  .channel('voting_listening_channel')
-  .on(
-      'postgres_changes',
-      {
-          event: '*',
-          schema: 'public',
-          table: 'voting',
+// function votingRealtimeListening(roomId,fetchVotingData){
+//   console.log('room id',roomId);
+//   const subscription =  supabase
+//   .channel('voting_listening_channel')
+//   .on(
+//       'postgres_changes',
+//       {
+//           event: '*',
+//           schema: 'public',
+//           table: 'voting',
       
-      },
-      (payload)=>{
-          console.log('🚨 payload im from pla', payload);
-          fetchVotingData();
-      }
-  )
-  .subscribe();
-  return () => {
-      subscription.unsubscribe();
-  };
-}
+//       },
+//       (payload)=>{
+//           console.log('🚨 payload im from pla', payload);
+//           fetchVotingData();
+//       }
+//   )
+//   .subscribe();
+//   return () => {
+//       subscription.unsubscribe();
+//   };
+// }
+
+
 
 

@@ -11,6 +11,7 @@ import {
   import { Button } from "@/components/ui/button";
 import { useState } from "react"
 import { supabase } from "@/lib/supabase";
+import { Modal } from "@/components/modal";
   
 export default function PlayerActions({currentPlayer,roomInfo,players,onAction}) {
 
@@ -240,13 +241,3 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
     )
 }
 
-export function Modal({prop,onClose}){
-    return (
-        <div className="fixed z-50 inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-            <div className="bg-white rounded-md p-4">
-                <p className="text-lg">{prop}</p>
-                <button className="mt-4 bg-primary text-primary-foreground px-4 py-2 rounded-md" onClick={onClose}>Close</button>
-            </div>
-        </div>
-    )
-}

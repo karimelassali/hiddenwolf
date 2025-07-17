@@ -6,7 +6,7 @@ import {v4 as uuidv4} from 'uuid'
 import {useRouter} from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {useUser} from "@clerk/nextjs"
-
+import { Toaster , toast } from "react-hot-toast";
 
 export default function Home() {
 
@@ -35,10 +35,11 @@ export default function Home() {
         host_id: user.id,
       })
       .then(() => {
+        toast.success(`Room ${shortId} created successfully`);
         router.push(`/room/${shortId}`);
       })
       .catch((error) => {
-        console.log(error);
+        toast.error(error.message);
       }) 
     }
       
@@ -65,6 +66,7 @@ export default function Home() {
   return (
 
     <div className="w-full h-full flex items-center justify-center border gap-10 border-amber-300">
+      <Toaster />
       <Button onClick={handleCreateRoom} >
         Create room
         </Button>

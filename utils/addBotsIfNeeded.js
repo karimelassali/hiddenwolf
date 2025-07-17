@@ -13,6 +13,7 @@ export async function addBotsIfNeede(roomID,botCount){
             is_alive: true,
             vote_to: null,
             player_id: uuidv4(),
+            is_human:false,
         })
     };
     console.log('bots',bots);
