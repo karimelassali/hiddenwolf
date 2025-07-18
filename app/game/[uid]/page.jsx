@@ -9,7 +9,9 @@ import GameActionsBar from '@/components/blocks/game-actions-bar'
 import { RolesModal } from '@/components/ui/rolesModal'
 import { useUser } from '@clerk/nextjs'
 import { toast, Toaster } from 'react-hot-toast';
-import {kill,seePlayer,savePlayer} from '@/utils/botsActions'
+import {kill,seePlayer,savePlayer,voting} from '@/utils/botsActions'
+import { Countdown } from '@/components/ui/countdown';
+import {trackUserConnectivity} from '@/utils/trackUserconnectivity'
 
 const StageResult = dynamic(()=>import('@/components/ui/stageResult'),{ssr:false});
 
@@ -26,6 +28,8 @@ export default function Game({ params }) {
     const [votingData,setVotingData] = useState([]);
     const [winner,setWinner] = useState('');
     const [winnerModal,setWinnerModal] = useState(false);
+    const [botsActionsStarted, setBotsActionsStarted] = useState(false);
+
     
 
 
@@ -71,7 +75,9 @@ export default function Game({ params }) {
             }
             const {data : players,error} = await supabase.from('players')
             .select('*')
-            .eq('room_id',roomId);
+            .eq('room_id',roomId)
+            .order('joined_at', { ascending: false })
+            ;
             if(error){
                 console.log(error);
             }
@@ -130,13 +136,22 @@ export default function Game({ params }) {
         }
 
 
+
         const runBotsActions = ()=>{
           if(roomData && players && currentPlayer && currentPlayer.player_id == roomData.host_id){
 
             const bots = players.filter(p => !p.is_human);
 
             if(roomData.stage == 'day'){
-              
+              bots.forEach(async (bot)=>{
+                const alivePlayers = players.filter(p => p.is_alive && p.id !== bot.id);
+                const randomTarget = alivePlayers[Math.floor(Math.random() * alivePlayers.length)];
+                
+                if (bot.is_action_done) return;
+                  if(bot.is_alive){
+                    await voting(bot,randomTarget,roomId);
+                  }
+              })
             }
             if(roomData.stage == 'night'){
 
@@ -150,25 +165,41 @@ export default function Game({ params }) {
                 setTimeout(async () => {
                   if (roomData.stage === 'night') {
                     if (bot.role === 'wolf') {
-                      await kill(bot, randomTarget);
+                      await kill(bot, randomTarget, roomId);
                     } else if (bot.role === 'seer') {
                       await seePlayer(bot, randomTarget);
                     } else if (bot.role === 'doctor') {
-                      await savePlayer(bot, randomTarget);
+                      await savePlayer(bot, randomTarget, roomId);
                     }
               
                     // ✅ Mark bot action as done
-                    await supabase.from('players').update({ is_action_done: true }).eq('id', bot.id);
+                    // await supabase.from('players').update({ is_action_done: true }).eq('id', bot.id);
                   }
-                }, Math.floor(Math.random() * 5000));
+                  
+                  
+                }, Math.floor(Math.random() * 5) + 1000);
               });
               
             }
           }
         }
 
+        
+
+        
         useEffect(()=>{
-          runBotsActions();
+          if(players && players.length !== 0){
+          if (roomData.stage === 'night' && currentPlayer?.player_id === roomData.host_id && !botsActionsStarted) {
+            runBotsActions();
+            setBotsActionsStarted(true); // ✅ شغّل مرة واحدة فقط في هذه المرحلة
+          }
+        
+          if (roomData.stage === 'day' && currentPlayer?.player_id === roomData.host_id && botsActionsStarted) {
+            runBotsActions();
+            setBotsActionsStarted(false); // ✅ لما يرجع للنهار، خليه مستعد للجولة التالية
+          }
+        }
+
         },[roomData.stage,currentPlayer])
 
         
@@ -178,17 +209,13 @@ export default function Game({ params }) {
 
         useEffect(()=>{
             fetchPlayers();
-          },[roomId])
+            if(roomId && user.id && roomData.host_id){
+              trackUserConnectivity(roomId,user.id,roomData.host_id);
+            }
+          },[roomId,user?.id,roomData.host_id])
 
 
-        // Listen to changes in the room and fetch the new data
-
-        useEffect(()=>{
-          roomsRealtimeListening(roomId,fetchRoomData);
-          playersRealtimeListening(roomId,fetchPlayers);
-          // votingRealtimeListening(roomId,fetchVotingData);
-        },[roomId])
-
+       
        
         
           
@@ -196,13 +223,18 @@ export default function Game({ params }) {
       useEffect(() => {
         if (!roomData.roles_assigned || !players || !user?.id) return;
       
-        const currentPlayer = players.find(player => player.player_id === user.id);
+        const currentPlayer = players && players.find(player => player.player_id === user.id);
         if (currentPlayer?.role) {
           setRole_preview(true);
         }
       }, [roomData.roles_assigned, players.role, user?.id]);
 
        useEffect(()=>{
+        const savedPlayer = players ? players.find(player => player.is_saved) : [];
+        if(savedPlayer){
+          console.log('player is saved' + savedPlayer.name);
+        }
+       
         if(roomData.stage === 'day' && roomData.wolf_killed){
           setStageResultModal(true);
           setTimeout(()=>{
@@ -211,11 +243,12 @@ export default function Game({ params }) {
           
         }
 
-        if(roomData.stage === 'day' && players.filter(player => player.is_alive).length === 1){
-          setWinnerModal(true);
-          setWinner('Wolf won');
-        }else{
-          setWinner('Villager won');
+        if ((roomData.stage === 'day' && players.filter(player => player.is_alive).length === 1) || 
+            (players.some(player => player.role === 'wolf') && !players.find(player => player.role === 'wolf').is_alive)) {
+            setWinnerModal(true);
+            setWinner('Villager Won');
+        } else {
+            setWinner('Wolf Won');
         }
 
        },[roomData.stage])
@@ -223,6 +256,17 @@ export default function Game({ params }) {
        //Fetching the voting data from voting table
      
        
+      
+
+       // Listen to changes in the room and fetch the new data
+
+       useEffect(()=>{
+        roomsRealtimeListening(roomId,fetchRoomData);
+        playersRealtimeListening(roomId,fetchPlayers);
+      },[roomId])
+
+
+
        
 
 
@@ -296,21 +340,28 @@ export default function Game({ params }) {
       
     </div>
     {
-      roomData.roles_assigned && currentPlayer &&(
-        <GameNavbar roomData={roomData} uid={uid} currentPlayerId={currentPlayer && currentPlayer.player_id}/>
+      roomData.roles_assigned && currentPlayer && players &&(
+        <GameNavbar roomData={roomData} uid={uid} currentPlayerId={currentPlayer && currentPlayer.player_id} players={players}/>
       )
     }
     {/* {JSON.stringify(currentPlayer)} */}
     <div className="flex w-full justify-between flex-col md:flex-row gap-4">
 
       //Players voted 
+      {JSON.stringify(votingData)}
     {
       
-      roomData.stage !== null && (
-        votingData.map(player => (
-          <p className="text-lg">Player {player.voter_name} voted for {player.voted_name}</p>
-        ))
-      )
+       
+        players
+          .filter(p => p.voted_to != null)
+          .map(player => {
+            const votedTo = players.find(p => p.id === player.voted_to);
+            return (
+              <p className="text-lg">
+                Player {player.name} voted for {votedTo?.name}
+              </p>
+            );
+          })
     }
 
       {
@@ -342,24 +393,21 @@ export default function Game({ params }) {
 
       }
       
-      <section className="w-50 bg-red-300  px-4">
-        
+      <section className="w-50 bg-slate-300  px-4">
         <h2 className="text-2xl font-bold mb-4">Players</h2>
-        {
-            roomData.roles_assigned ? (
-                <ul className="list-disc pl-4">
-                {players.map(player => (
-                    <li key={player.id} className="my-2">
-                    <span className="font-bold">{player.name}</span> - {player.role} - {player.is_alive ? ('alive') : ('dead')}
-
-                    </li>
-                ))}
-               
-                </ul>
-            ):(
-                <p>No roles assigned yet</p>
-            )
-        }
+        <ul className="list-disc pl-4">
+          {players.map(player => (
+            <li key={player.id} className="my-2">
+              <span className="font-bold">{player.name}</span>
+              <br />
+              Role: {player.role}
+              <br />
+              Alive: {player.is_alive ? <span className="text-green-600">Yes</span> : <span className="text-red-600">No</span>}
+              <br />
+              Action done: {player.is_action_done ? <span className="text-green-600">Yes</span> : <span className="text-red-600">No</span>}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="w-full md:w-1/2 px-4">
@@ -438,6 +486,7 @@ export function WinnerModal({winner}) {
         Game Ended .
         <h1 className="text-2xl font-bold">{winner}</h1>
         <p className="text-lg">{winner}</p>
+        <Countdown number='5' target='/' />
         <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded" onClick={() => window.location.href = '/'}>Go back to home</button>
       </div>
     </div>
@@ -447,7 +496,6 @@ export function WinnerModal({winner}) {
 
 
 function roomsRealtimeListening(roomId,fetchRoomData){
-  console.log('room id',roomId);
   const subscription =  supabase
   .channel('room_listening_channel')
   .on(
@@ -460,7 +508,6 @@ function roomsRealtimeListening(roomId,fetchRoomData){
       
       },
       (payload)=>{
-          console.log('🚨 payload im from', payload);
           fetchRoomData();
       }
   )
@@ -472,7 +519,6 @@ function roomsRealtimeListening(roomId,fetchRoomData){
 
 
 function playersRealtimeListening(roomId,fetchPlayers){
-  console.log('room id',roomId);
   const subscription =  supabase
   .channel('players_listening_channel')
   .on(
@@ -484,7 +530,6 @@ function playersRealtimeListening(roomId,fetchPlayers){
       
       },
       (payload)=>{
-          console.log('🚨 payload im from pla', payload);
           fetchPlayers();
       }
   )
@@ -493,31 +538,6 @@ function playersRealtimeListening(roomId,fetchPlayers){
       subscription.unsubscribe();
   };
 }
-
-
-
-// function votingRealtimeListening(roomId,fetchVotingData){
-//   console.log('room id',roomId);
-//   const subscription =  supabase
-//   .channel('voting_listening_channel')
-//   .on(
-//       'postgres_changes',
-//       {
-//           event: '*',
-//           schema: 'public',
-//           table: 'voting',
-      
-//       },
-//       (payload)=>{
-//           console.log('🚨 payload im from pla', payload);
-//           fetchVotingData();
-//       }
-//   )
-//   .subscribe();
-//   return () => {
-//       subscription.unsubscribe();
-//   };
-// }
 
 
 

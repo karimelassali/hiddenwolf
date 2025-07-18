@@ -7,7 +7,7 @@ import {Players} from '@/components/Players'
 import { useRouter } from 'next/navigation'
 import {Countdown} from '@/components/ui/countdown'
 import { addBotsIfNeede } from '@/utils/addBotsIfNeeded'
-
+import {trackUserConnectivity} from '@/utils/trackUserconnectivity'
 
 
 
@@ -195,22 +195,10 @@ export default function Room({params}) {
 
     //Interval for keep tracking on user if he is online or offline
     useEffect(()=>{
-        const interval = setInterval(async () => {
-              await supabase.from('players').update({last_seen:new Date().toISOString()}).eq('player_id',user.id);
-            console.log('last seen updated');
-            const { data: inactivePlayers, error } = await supabase
-                .from('players')
-                .select('id, last_seen')
-                .eq('room_id', roomId)
-                .lt('last_seen', new Date(Date.now() - 30000).toISOString());
 
-                if (inactivePlayers?.length) {
-                const ids = inactivePlayers.map((p) => p.id);
-                await supabase.from('players').delete().in('id', ids);
-                console.log('🧹 removed inactive players:', ids);
-                }
-        },5000)
-        return () => clearInterval(interval);
+        if(roomId && user.id){
+            trackUserConnectivity(roomId,user.id,roomData.host_id);
+        }
        
     },[roomId,user.id])
 

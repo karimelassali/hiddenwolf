@@ -1,53 +1,63 @@
 import { supabase } from "@/lib/supabase";
 
-export async function kill(currentBot,players){
-   const alivePlayers = players.filter((player) => player.is_alive && player.player_id !== currentBot.player_id);
-   const randomToKill = Math.floor(Math.random() * alivePlayers.length); 
-   if(alivePlayers.length == 1){
-    return;
-   }
+export async function kill(currentBot,randomTarget,roomId){
+    console.log('bot is' + JSON.stringify(currentBot))
    if(currentBot.role == 'wolf' && !currentBot.is_action_done){
    const {error} = await supabase.from('players')
-   .update({is_alive: false})
-   .eq('id',alivePlayers[randomToKill].id);
+   .update({is_alive: false,dying_method:'wolf'})
+   .eq('id',randomTarget.id);
    if(error){
     console.log(error);
    }
+
+   const {error:roomWolfKilledError} = await supabase.from('rooms')
+   .update({wolf_killed:true})
+   .eq('id',roomId);
+   if(roomWolfKilledError){
+    console.log(roomWolfKilledError);
    }
+   await supabase.from('players').update({is_action_done:true}).eq('id',currentBot.id)
+}
 }
 
-export async function seePlayer(currentBot,players){
-    const alivePlayers = players.filter((player) => player.is_alive && player.player_id !== currentBot.player_id);
-    const randomToSee = Math.floor(Math.random() * alivePlayers.length); 
-    const chosenPlayerRole = alivePlayers[randomToSee].role;
-    return chosenPlayerRole;
+export async function seePlayer(currentBot,randomTarget){
+    const chosenPlayerRole = randomTarget.role;
+    console.log('bot see' + chosenPlayerRole.name + 'is' + chosenPlayerRole.role)
+    // return chosenPlayerRole;
+    await supabase.from('players').update({is_action_done:true}).eq('id',currentBot.id)
 
 }
 
-export async function savePlayer(currentBot,players){
-    const alivePlayers = players.filter((player) => player.is_alive && player.player_id );
-    const randomToSave = Math.floor(Math.random() * alivePlayers.length); 
+export async function savePlayer(currentBot,randomTarget){
     if(currentBot.role == 'doctor' && !currentBot.is_action_done){
     const {error} = await supabase.from('players')
     .update({is_saved: true})
-    .eq('id',alivePlayers[randomToSave].id);
+    .eq('id',randomTarget.id);
     if(error){
         console.log(error);
     }
+   await supabase.from('players').update({is_action_done:true}).eq('id',currentBot.id)
+
 }
 }
 
 
-// export async function voting(roomInfo,players){
-//     const alivePlayers = players.filter((player) => player.is_alive);
-//     const randomToVote = Math.floor(Math.random() * alivePlayers.length); 
-//     const {error} = await supabase
-//     .from('voting')
-//     .insert({
-//         room_id: roomInfo.id,
-//         voted_id: alivePlayers[randomToVote].id
-//     })
-//     if(error){
-//         console.log(error);
-//     }
-// }
+export async function voting(currentBot,randomTarget,roomId){
+    console.log('Im ' + currentBot.name + ' and I voted ' + randomTarget.name)
+    const {error} = await supabase
+    .from('voting')
+    .insert({
+        room_id:roomId,
+            round:1,
+            voter_id:currentBot.id,
+            voter_name:currentBot.name,
+            voter_img:currentBot.img,
+            voted_name:randomTarget.name,
+            voted_id:randomTarget.id,
+            voted_img:randomTarget.img
+    })
+    if(error){
+        console.log(error);
+    }
+    await supabase.from('players').update({is_action_done:true}).eq('id',currentBot.id)
+}

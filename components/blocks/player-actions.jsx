@@ -202,7 +202,7 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
                         {
                             currentPlayer?.role === 'villager' && roomInfo.stage === 'day' && (
                                 <Button
-                                variant="outline"
+                                variant="green"
                                 onClick={() => onAction(player)}
                             >
                                 Vote
@@ -215,7 +215,8 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
                             roomInfo.stage === 'day' && 
                             (
                                 <Button
-                                    variant="outline"
+                                    
+                                    variant="red"
                                     onClick={() => {voting(player);applyActionDone()}}
                                 >
                                     Vote
