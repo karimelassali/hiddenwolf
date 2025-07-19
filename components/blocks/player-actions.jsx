@@ -161,7 +161,7 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
             <DrawerTitle>Choose a player</DrawerTitle>
             </DrawerHeader>
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {players && players.filter(player => player.role != 'wolf').map((player) => (
+                {players && players.map((player) => (
                     <div key={player.id} className="bg-white dark:bg-input/30 p-4 rounded-md shadow-sm">
                         {
                         player.is_alive ? (
@@ -175,7 +175,7 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
                                 </Button>
                             )}
 
-                            {currentPlayer?.role === 'seer' && roomInfo.stage === 'night' && (
+                            {currentPlayer?.role === 'seer' && roomInfo.stage === 'night' &&  currentPlayer.id != player.id && (
                                 <Button
                                 variant="outline"
                                 onClick={() => {seePlayer(player);applyActionDone()}}
@@ -200,7 +200,7 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
 
                         <h3 className="text-lg font-semibold">{player.name}</h3>
                         {
-                            currentPlayer?.role === 'villager' && roomInfo.stage === 'day' && (
+                            currentPlayer?.role === 'villager' && roomInfo.stage === 'day' && currentPlayer.id != player.id && (
                                 <Button
                                 variant="green"
                                 onClick={() => onAction(player)}
@@ -213,6 +213,7 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
                         {
                             currentPlayer && 
                             roomInfo.stage === 'day' && 
+                            currentPlayer.id != player.id && 
                             (
                                 <Button
                                     
@@ -236,7 +237,7 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
         </DrawerContent>
             </Drawer>
             {
-                modalOpen && <Modal prop={savedPlayer ? savedPlayer?.name + ' is saved' : playerToSeeRole?.name + ' is ' + playerToSeeRole?.role == 'wolf' ? playerToSeeRole?.name + ' is the wolf' : playerToSeeRole?.name + ' is not the wolf'} onClose={() => setModalOpen(false)}/>
+                modalOpen && <Modal prop={savedPlayer ? savedPlayer?.name + ' is saved' : playerToSeeRole?.name + ' is ' + playerToSeeRole?.role == 'wolf' ? playerToSeeRole?.name + ' is the wolf' : playerToSeeRole?.name + ' is not the wolf'} onCloseModal={() => setModalOpen(false)}/>
             }
         </div>
     )

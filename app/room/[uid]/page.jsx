@@ -30,8 +30,9 @@ export default function Room({params}) {
     useEffect(()=>{
         if(fetchUser.isLoaded){
             setUser(fetchUser.user);
+            
+
         }
-        console.log(user.fullName);
     },[fetchUser])
 
     const fetchRoomData = async () => {
@@ -68,7 +69,10 @@ export default function Room({params}) {
                 is_alive: true,
                 vote_to: null,
                 player_id: user.id,
-                last_seen: new Date().toISOString()
+                last_seen: new Date().toISOString(),
+                is_human:true,
+                profile:user.imageUrl,
+
             };
     
             if (existingPlayer) {
@@ -157,7 +161,7 @@ export default function Room({params}) {
             event: '*',
             schema: 'public',
             table: 'players',
-            filter: `room_id=eq.${roomId}`,  // إضافي: اشتراك فقط على هذه الغرفة
+            filter: `room_id=eq.${roomId}`,  
         
         },
         (payload)=>{
@@ -177,7 +181,7 @@ export default function Room({params}) {
             event: '*',
             schema: 'public',
             table: 'rooms',
-            filter: `id=eq.${roomId}`,  // إضافي: اشتراك فقط على هذه الغرفة
+            filter: `id=eq.${roomId}`,  
         
         },
         (payload)=>{

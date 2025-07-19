@@ -12,6 +12,7 @@ import { toast, Toaster } from 'react-hot-toast';
 import {kill,seePlayer,savePlayer,voting} from '@/utils/botsActions'
 import { Countdown } from '@/components/ui/countdown';
 import {trackUserConnectivity} from '@/utils/trackUserconnectivity'
+import PlayersChat from '@/components/chat'
 
 const StageResult = dynamic(()=>import('@/components/ui/stageResult'),{ssr:false});
 
@@ -209,7 +210,7 @@ export default function Game({ params }) {
 
         useEffect(()=>{
             fetchPlayers();
-            if(roomId && user.id && roomData.host_id){
+            if(roomId && user?.id && roomData.host_id){
               trackUserConnectivity(roomId,user.id,roomData.host_id);
             }
           },[roomId,user?.id,roomData.host_id])
@@ -441,9 +442,11 @@ export default function Game({ params }) {
        
       </section>
       <div className="chat">
-            <div className="chat-header">
-                <h2 className="text-lg font-bold">Chat</h2>
-            </div>
+            {
+              roomId && currentPlayer && (
+                <PlayersChat roomID={roomId} playerID={currentPlayer?.id} playerName={currentPlayer?.name} is_alive={currentPlayer?.is_alive} />
+              )
+            }
         </div>
         
 
@@ -504,8 +507,8 @@ function roomsRealtimeListening(roomId,fetchRoomData){
           event: '*',
           schema: 'public',
           table: 'rooms',
-          //i should make a filter here
-      
+              //i should make a filter here
+          filter: `id=eq.${roomId}`,    
       },
       (payload)=>{
           fetchRoomData();
@@ -527,6 +530,7 @@ function playersRealtimeListening(roomId,fetchPlayers){
           event: '*',
           schema: 'public',
           table: 'players',
+          filter: `room_id=eq.${roomId}`,
       
       },
       (payload)=>{
