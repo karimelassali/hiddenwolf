@@ -1,6 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import {NetworkTracking} from '@/components/networkTracking'
-
+import { Navbar } from "@/components/navbar";
 
 import "./globals.css";
 import {
@@ -25,22 +25,7 @@ export default function RootLayout({ children }) {
       <body
         className={` antialiased h-full`}
       >
-         <header className="flex justify-end items-center p-4 gap-4 h-16"> 
-          <NetworkTracking />
-          
-
-            <SignedOut>
-              <SignInButton />
-              <SignUpButton>
-                <button className="bg-[#6c47ff] text-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
-                  Sign Up
-                </button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </header>
+         <Navbar />
         {children}
        
       </body>

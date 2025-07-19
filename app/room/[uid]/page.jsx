@@ -9,7 +9,7 @@ import {Countdown} from '@/components/ui/countdown'
 import { addBotsIfNeede } from '@/utils/addBotsIfNeeded'
 import {trackUserConnectivity} from '@/utils/trackUserconnectivity'
 
-
+import { quotes } from '@/utils/quotes'
 
 
 
@@ -25,7 +25,7 @@ export default function Room({params}) {
     const fetchUser = useUser();
     const [players, setPlayers] = useState([]);
     const [hasRoomBeenPlayed, setHasRoomBeenPlayed] = useState(false);
-
+    const [quote,setQuote] = useState('');
 
     useEffect(()=>{
         if(fetchUser.isLoaded){
@@ -203,6 +203,9 @@ export default function Room({params}) {
         if(roomId && user.id){
             trackUserConnectivity(roomId,user.id,roomData.host_id);
         }
+        if(quote == ''){
+            setQuote(quotes());
+        }
        
     },[roomId,user.id])
 
@@ -215,6 +218,7 @@ export default function Room({params}) {
 
         }
     },[roomData.stage])
+
     
     return (
         hasRoomBeenPlayed ? (
@@ -224,31 +228,49 @@ export default function Room({params}) {
                 </div>
             </div>
         ) : (
-            <div className="h-screen flex p-5 flex-col">
-            <Players fetched_players={players}/>
-            <div className="fixed flex w-full  bottom-0 justify-between items-end border-t border-gray-200 p-4 ">
-            {roomData.stage}
-                {
-                    roomData && roomData.host_id !== user?.id ?(
-                        <div className="flex items-center">
-                            <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                                <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <div
+            style={{backgroundImage:'url("/assets/images/waitingBackground.png")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: 'rgba(0, 0, 0, 0.9)'}}
+            className="h-screen flex flex-col">
+
+            <Players fetched_players={players} room_host_id={roomData.host_id} />
+
+            <div className="fixed  gap-y-5 flex flex-col w-full backdrop-blur-lg bg-slate-900/20 bottom-0 justify-between items-center border-t border-slate-700/50 p-6 shadow-2xl">
+                <div className="flex  w-full items-center justify-between space-x-4">
+                {roomData && roomData.host_id !== user?.id ? (
+                    <div className="flex items-center space-x-4">
+                        <div className="relative">
+                            <div className="w-14 h-14 bg-gradient-to-br from-slate-800 to-slate-900 rounded-full flex items-center justify-center border border-slate-600/50 shadow-lg">
+                                <svg className="animate-spin h-6 w-6 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                             </div>
-                            <p className="ml-2">Waiting for host to start game</p>
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full animate-pulse"></div>
                         </div>
-                    ) : (
-                        <>
-                                <div className="flex items-center">
-                                <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                                    <p className="text-2xl">{players.length}</p>
+                        <div className="flex flex-col">
+                            <p className="text-slate-200 font-medium text-lg">Waiting for host to start game</p>
+                            <p className="text-slate-400 text-sm">Stage: {roomData.stage}</p>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex items-center space-x-4">
+                            <div className="relative">
+                                <div className="w-14 h-14 bg-gradient-to-br from-violet-700 to-violet-800 rounded-full flex items-center justify-center border border-violet-600/50 shadow-lg">
+                                    <p className="text-2xl font-bold text-white">{players.length}</p>
                                 </div>
-                                <p className="ml-2">Players in this room</p>
+                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-violet-400 rounded-full flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                </div>
                             </div>
-                            
-                            <button onClick={async ()=>{
+                            <div className="flex flex-col">
+                                <p className="text-slate-200 font-medium text-lg">Players in this room</p>
+                                <p className="text-slate-400 text-sm">Stage: {roomData.stage}</p>
+                            </div>
+                        </div>
+                        
+                        <button 
+                            onClick={async () => {
                                 try {
                                     if (roomData.stage === 'night') {
                                         const { data, error } = await supabase
@@ -259,10 +281,7 @@ export default function Room({params}) {
                                             console.log(error);
                                         }
                                     } else {
-                                        
-                                            addBotsIfNeede(roomId, 4 - players.length)
-                                        
-                                        
+                                        addBotsIfNeede(roomId, 4 - players.length)
                                         const { data, error } = await supabase
                                             .from('rooms')
                                             .update({stage: 'night'})
@@ -274,15 +293,33 @@ export default function Room({params}) {
                                 } catch (error) {
                                     console.log(error);
                                 }
-                            }} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
-                                {roomData.stage === 'play' ? 'Stop' : 'Start Game'}
-                            </button>
-                        </>
-                    )
-                        
-                    
-                }
-               
+                            }} 
+                            className="group relative overflow-hidden bg-gradient-to-r from-violet-600 to-violet-700 cursor-pointer hover:from-violet-700 hover:to-violet-800 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl border border-violet-500/30"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                            <span className="relative flex items-center space-x-2">
+                                {roomData.stage === 'play' ? (
+                                    <>
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clipRule="evenodd" />
+                                        </svg>
+                                        <span>Stop Game</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                        </svg>
+                                        <span>Start Game</span>
+                                    </>
+                                )}
+                            </span>
+                        </button>
+                    </>
+                )}
+                </div>
+                <p className="text-lg text-center font-bold font-['Lobster'] italic text-slate-400">"{quote}"</p>
+
             </div>
         </div>
         )

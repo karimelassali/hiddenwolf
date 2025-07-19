@@ -1,17 +1,26 @@
 import Image from "next/image";
+import { FaCrown } from "react-icons/fa";
 
-export  function Players({fetched_players}) {
+export  function Players({fetched_players,room_host_id}) {
     return (
-        <div className="flex-1 flex flex-col items-center justify-center">
+        <div className="flex-1  flex flex-col items-center justify-center">
            
-        <div className="flex flex-col items-center">
+        <div className="flex rounded-md p-5 flex-col items-center gap-5">
                 
                 {
                     fetched_players && fetched_players.map((player) => {
                         return (
-                            <div key={player.id} className="m-4 flex border border-white justiffy-between items-center p-3 gap-5 rounded-lg">
-                                <Image className="w-10 h-10 rounded-full" width={50} height={50} src={player.profile} alt="player profile pic" />
-                                <p className="text-center">{player.name}</p>
+                            <div key={player.id} className="m-4 relative flex backdrop-blur-lg border-l border-b border-slate-400 justify-between items-center p-5 gap-10 rounded-lg">
+                                <Image className="w-20 h-20 rounded-full" width={100} height={100} src={player.profile} alt="player profile pic" />
+                                <p className="text-2xl text-center text-white">{player.name}</p>
+                                
+                                {
+                                    player.player_id === room_host_id && (
+                                        <div className="flex absolute top-[-30px] left-0  items-center gap-2 animate-pulse">
+                                            <FaCrown className="text-yellow-500 text-2xl" size={50} />
+                                        </div>
+                                    )
+                                }
                             </div>
                         )
                     })

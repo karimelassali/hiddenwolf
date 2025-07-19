@@ -23,6 +23,13 @@ export default function StageResult({ result, players, status }) {
             ))
           }
       </ul>
+      {
+        players.find( p => p.is_saved) && (
+          <p className="text-2xl font-bold">
+            {players.find( p => p.is_saved).name} was saved .
+          </p>
+        )
+      }
     </div>
   );
 }

@@ -24,7 +24,9 @@ const buttonVariants = cva(
           "bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60 dark:hover:bg-destructive/90",
           green:
           "bg-green-300",
-          red:"bg-red-400"
+          red:"bg-red-400",
+          createRoom:'bg-indigo-500 text-white p-5 rounded-md hover:bg-indigo-600 transition-all cursor-pointer flex justify-center items-center gap-2 text-lg font-medium',
+          dark:'bg-gray-700 text-white p-5 w-30 rounded-md hover:bg-gray-700 transition-all cursor-pointer border border-white'
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -35,7 +37,7 @@ const buttonVariants = cva(
     },
     defaultVariants: {
       variant: "default",
-      size: "default",
+      size: "lg",
     },
   }
 )

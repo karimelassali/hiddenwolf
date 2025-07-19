@@ -1,6 +1,11 @@
 'use client'
 import React from 'react'
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
+import {  FaDice, FaArrowRight, FaHourglass } from 'react-icons/fa';
+import { motion } from 'framer-motion';
+import { FaSkull, FaEye, FaEyeSlash } from 'react-icons/fa';
+import {GiWolfHowl} from 'react-icons/gi';
 
 import { useEffect , useState } from 'react'
 import { supabase } from '@/lib/supabase'
@@ -13,9 +18,11 @@ import {kill,seePlayer,savePlayer,voting} from '@/utils/botsActions'
 import { Countdown } from '@/components/ui/countdown';
 import {trackUserConnectivity} from '@/utils/trackUserconnectivity'
 import PlayersChat from '@/components/chat'
+import { AnimatedTooltipPeople } from '@/components/tooltip';
 
 const StageResult = dynamic(()=>import('@/components/ui/stageResult'),{ssr:false});
-
+const SidePlayers = dynamic(()=>import('@/components/sidePlayers'),{ssr:false});
+const GameBox = dynamic(()=>import('@/components/gameBox'),{ssr:false});
 
 export default function Game({ params }) {
     const [roomId,setRoomId] = useState('');
@@ -30,13 +37,12 @@ export default function Game({ params }) {
     const [winner,setWinner] = useState('');
     const [winnerModal,setWinnerModal] = useState(false);
     const [botsActionsStarted, setBotsActionsStarted] = useState(false);
+    const [sidePlayersOpen,setSidePlayersOpen] = useState(false);
 
     
 
 
-    const dayBackground =  'http://localhost:3000/assets/images/day.png';
-    const nightBackground = 'http://localhost:3000/assets/images/night.png';
-
+   
 
      const resolvedParams = React.use(params);
     
@@ -236,7 +242,7 @@ export default function Game({ params }) {
           console.log('player is saved' + savedPlayer.name);
         }
        
-        if(roomData.stage === 'day' && roomData.wolf_killed){
+        if(roomData.stage === 'day' && roomData.wolf_killed || players.filter(player => player.is_saved).length > 0){
           setStageResultModal(true);
           setTimeout(()=>{
             setStageResultModal(false);
@@ -348,8 +354,7 @@ export default function Game({ params }) {
     {/* {JSON.stringify(currentPlayer)} */}
     <div className="flex w-full justify-between flex-col md:flex-row gap-4">
 
-      //Players voted 
-      {JSON.stringify(votingData)}
+    
     {
       
        
@@ -365,82 +370,119 @@ export default function Game({ params }) {
           })
     }
 
-      {
-        !roomData.roles_assigned && user?.id === roomData.host_id ? (
-          <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg p-8 shadow-lg">
-              {!roomData.roles_assigned && user?.id === roomData.host_id && (
-                <button
-                  onClick={ApplyingRoles}
-                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full"
-                >
-                  Apply Roles 
-                </button>
-              )}
-            </div>
-          </div>
-        ):
-        
-          !roomData.roles_assigned && user?.id !== roomData.host_id && (
-            <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
-              <div className="bg-white rounded-lg p-8 shadow-lg">
-                <p className="text-center font-bold">
-                  Waiting for the host to assign roles...
-                </p>
-              </div>
-            </div>
-          )
-        
-
-      }
-      
-      <section className="w-50 bg-slate-300  px-4">
-        <h2 className="text-2xl font-bold mb-4">Players</h2>
-        <ul className="list-disc pl-4">
-          {players.map(player => (
-            <li key={player.id} className="my-2">
-              <span className="font-bold">{player.name}</span>
-              <br />
-              Role: {player.role}
-              <br />
-              Alive: {player.is_alive ? <span className="text-green-600">Yes</span> : <span className="text-red-600">No</span>}
-              <br />
-              Action done: {player.is_action_done ? <span className="text-green-600">Yes</span> : <span className="text-red-600">No</span>}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="w-full md:w-1/2 px-4">
-        <div
-          style={{
-            backgroundImage: `url(${roomData.stage === 'night' ? nightBackground : dayBackground})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-          className="h-screen grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+    {
+    !roomData.roles_assigned && user?.id === roomData.host_id ? (
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed top-0 left-0 w-full h-full bg-slate-900 backdrop-blur-lg z-50 flex items-center justify-center"
+      >
+        <motion.div 
+          initial={{ scale: 0.8, y: 20 }}
+          animate={{ scale: 1, y: 0 }}
+          exit={{ scale: 0.8, y: 20 }}
+          className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 shadow-2xl border border-slate-700/50 max-w-md mx-4"
         >
-          {players.map(player => (
-            <div
-              key={player.id}
-              className={` rounded-lg h-20 p-2 shadow-md border backdrop-blur-lg `}
-            >
-              <h2 className="text-sm font-bold">{player.name}</h2>
-              <p className="text-xs">Role: {player.role}</p>
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-purple-700 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <GiWolfHowl className="text-2xl text-white"  size={50}/>
             </div>
-          ))}
-        </div>
-        <div className=" flex justify-center items-center">
-          {role_preview && roomData.roles_assigned && players.find(player => player.player_id === user?.id) && <RolesModal role={players.find(player => player.player_id === user?.id)?.role} />}
-          {
-            roomData.roles_assigned && setTimeout(() => {
-              setRole_preview(false);
-            }, 5000)
             
-          }
-        </div>
-       
-      </section>
+            <AnimatedTooltipPeople people={players} />
+
+            <h3 className="text-2xl font-bold text-slate-200 mb-2">Ready to Assign Roles?</h3>
+            <p className="text-slate-400">Distribute roles to all players to begin the game</p>
+          </div>
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={ApplyingRoles}
+            className="w-full group relative overflow-hidden bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 border border-purple-500/30"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+            <span className="relative flex items-center justify-center space-x-3">
+              <FaDice className="text-lg" />
+              <span className="text-lg">Apply Roles</span>
+              <FaArrowRight className="text-sm group-hover:translate-x-1 transition-transform" />
+            </span>
+          </motion.button>
+        </motion.div>
+      </motion.div>
+    ) : (
+      !roomData.roles_assigned && user?.id !== roomData.host_id && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed top-0 left-0 w-full h-full bg-slate-900 backdrop-blur-lg z-50 flex items-center justify-center"
+        >
+          <motion.div 
+            initial={{ scale: 0.8, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.8, y: 20 }}
+            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-8 shadow-2xl border border-slate-700/50 max-w-md mx-4"
+          >
+            <div className="text-center">
+              <div className="relative mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-amber-600 to-amber-700 rounded-full flex items-center justify-center mx-auto shadow-lg">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  >
+                    <FaHourglass className="text-2xl text-white" />
+                  </motion.div>
+                </div>
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full"
+                ></motion.div>
+              </div>
+              
+              <h3 className="text-2xl font-bold text-slate-200 mb-3">Please Wait</h3>
+              <AnimatedTooltipPeople people={players} />
+
+              <p className="text-slate-400 text-lg leading-relaxed">
+                The host is preparing to assign roles to all players...
+              </p>
+              
+              <motion.div 
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
+                className="flex justify-center items-center space-x-1 mt-4"
+              >
+                <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
+                <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
+                <div className="w-2 h-2 bg-amber-400 rounded-full"></div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )
+    )
+    }
+        <motion.button
+          onClick={() => setSidePlayersOpen(!sidePlayersOpen)}
+          className="fixed top-4 right-4 z-10 bg-white p-2 rounded-full shadow-lg"
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.2 }}
+        >
+          Open
+          <GiWolfHowl className="text-2xl" />
+        </motion.button>
+    
+    {players && <SidePlayers players={players} />}
+
+     //
+     {
+      roomData && currentPlayer && (
+        <GameBox roomData={roomData} players={players} currentPlayerId={currentPlayer?.id} />
+      )
+     }
+
       <div className="chat">
             {
               roomId && currentPlayer && (
