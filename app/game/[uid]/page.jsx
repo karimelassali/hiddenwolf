@@ -184,7 +184,7 @@ export default function Game({ params }) {
                   }
                   
                   
-                }, Math.floor(Math.random() * 5) + 1000);
+                }, Math.floor(Math.random() * 9000) + 1000);
               });
               
             }
@@ -271,6 +271,7 @@ export default function Game({ params }) {
         roomsRealtimeListening(roomId,fetchRoomData);
         playersRealtimeListening(roomId,fetchPlayers);
       },[roomId])
+
 
 
 

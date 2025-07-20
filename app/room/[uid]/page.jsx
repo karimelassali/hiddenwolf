@@ -230,7 +230,7 @@ export default function Room({params}) {
         ) : (
             <div
             style={{backgroundImage:'url("/assets/images/waitingBackground.png")', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundColor: 'rgba(0, 0, 0, 0.9)'}}
-            className="h-screen flex flex-col">
+            className="min-h-screen flex flex-col">
 
             <Players fetched_players={players} room_host_id={roomData.host_id} />
 

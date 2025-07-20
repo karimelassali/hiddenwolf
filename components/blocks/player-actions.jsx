@@ -120,126 +120,130 @@ export default function PlayerActions({currentPlayer,roomInfo,players,onAction})
     
     return (
         <div className="flex flex-col gap-2">
-            
-            <Drawer>
-        {
-            currentPlayer &&  currentPlayer.is_alive && !currentPlayer.is_action_done && (
-                <DrawerTrigger>
-                {
-                    currentPlayer?.role === 'wolf' && (roomInfo.stage === 'night' ? (
-                        <Button variant="destructive" onClick={() => setOpen(true)}>Kill</Button>
-                    )
-                    : (
-                        <Button variant="destructive" onClick={() => setOpen(true)}>Vote</Button>
-                    ))
-                }
-                {
-                    currentPlayer?.role === 'seer' && (roomInfo.stage === 'night' ? (
-                        <Button variant="outline" onClick={() => seePlayer(player)}>See</Button>
-                    ) : (
-                        <Button variant="destructive" onClick={() => setOpen(true)}>Vote</Button>
-                    ))
-                } 
-                {
-                    currentPlayer?.role === 'doctor' && (roomInfo.stage === 'night' ? (
-                        <Button variant="outline" onClick={() => setOpen(true)}>Save</Button>
-                    ) : (
-                        <Button variant="destructive" onClick={() => setOpen(true)}>Vote</Button>
-                    ))
-                }
-                {
-                    currentPlayer?.role === 'villager' && roomInfo.stage !== 'night' && (
-                        <Button variant="outline" onClick={() => setOpen(true)}>Vote</Button>
-                    )
-                }
-                </DrawerTrigger>
+        <Drawer>
+          {
+            currentPlayer && currentPlayer.is_alive && !currentPlayer.is_action_done && (
+              <DrawerTrigger>
+                {/* Role-specific buttons */}
+                {currentPlayer?.role === 'wolf' && roomInfo.stage === 'night' && (
+                  <Button variant="destructive" onClick={() => setOpen(true)}>Kill</Button>
+                )}
+      
+                {currentPlayer?.role === 'seer' && roomInfo.stage === 'night' && (
+                  <Button variant="outline" onClick={() => setOpen(true)}>See</Button>
+                )}
+      
+                {currentPlayer?.role === 'doctor' && roomInfo.stage === 'night' && (
+                  <Button variant="outline" onClick={() => setOpen(true)}>Save</Button>
+                )}
+      
+                {/* Vote button for day stage */}
+                {roomInfo.stage === 'day' && (
+                  <Button variant="outline" onClick={() => setOpen(true)}>Vote</Button>
+                )}
+              </DrawerTrigger>
             )
-        }
-        
-        <DrawerContent>
+          }
+      
+          <DrawerContent>
             <DrawerHeader>
-            <DrawerTitle>Choose a player</DrawerTitle>
+              <DrawerTitle>Choose a player</DrawerTitle>
             </DrawerHeader>
+      
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {players && players.map((player) => (
+              {
+                players &&
+                players
+                  ?.filter((player) => {
+                    if (!player.is_alive) return false; // Show only alive players
+      
+                    // 🐺 Wolf cannot target himself at night
+                    if (currentPlayer?.role === 'wolf' && roomInfo.stage === 'night') {
+                      return player.id !== currentPlayer.id;
+                    }
+      
+                    // 🔮 Seer cannot target himself
+                    if (currentPlayer?.role === 'seer' && roomInfo.stage === 'night') {
+                      return player.id !== currentPlayer.id;
+                    }
+      
+                    // 👨‍🌾 Villager & other roles can't vote for themselves during the day
+                    if (roomInfo.stage === 'day' && currentPlayer?.id === player.id) {
+                      return false;
+                    }
+      
+                    // 🧑‍⚕️ Doctor can save anyone (including himself)
+                    return true;
+                  })
+                  .map((player) => (
                     <div key={player.id} className="bg-white dark:bg-input/30 p-4 rounded-md shadow-sm">
-                        {
-                        player.is_alive ? (
-                            <>
-                            {currentPlayer?.role === 'wolf' && roomInfo.stage === 'night' && !roomInfo.wolf_killed && (
-                                <Button
-                                variant="kill"
-                                onClick={() => {killPlayer(player);applyActionDone()}}
-                                >
-                                Kill
-                                </Button>
-                            )}
-
-                            {currentPlayer?.role === 'seer' && roomInfo.stage === 'night' &&  currentPlayer.id != player.id && (
-                                <Button
-                                variant="outline"
-                                onClick={() => {seePlayer(player);applyActionDone()}}
-                                >
-                                See
-                                </Button>
-                            )}
-
-                            {currentPlayer?.role === 'doctor' && roomInfo.stage === 'night' && (
-                                <Button
-                                variant="outline"
-                                onClick={() => {savePlayer(player);applyActionDone()}}
-                                >
-                                Save
-                                </Button>
-                            )}
-                            </>
-                        ) : (
-                            <p>dead</p>
-                        )
-                        }
-
-                        <h3 className="text-lg font-semibold">{player.name}</h3>
-                        {
-                            currentPlayer?.role === 'villager' && roomInfo.stage === 'day' && currentPlayer.id != player.id && (
-                                <Button
-                                variant="green"
-                                onClick={() => onAction(player)}
-                            >
-                                Vote
-                                    </Button>
-                            )
-                        }
-                        
-                        {
-                            currentPlayer && 
-                            roomInfo.stage === 'day' && 
-                            currentPlayer.id != player.id && 
-                            (
-                                <Button
-                                    
-                                    variant="red"
-                                    onClick={() => {voting(player);applyActionDone()}}
-                                >
-                                    Vote
-                                </Button>
-                            )
-                        }
-
-                        
+                      <h3 className="text-lg font-semibold">{player.name}</h3>
+      
+                      {/* 🐺 Wolf Kill Button */}
+                      {currentPlayer?.role === 'wolf' && roomInfo.stage === 'night' && !roomInfo.wolf_killed && (
+                        <Button
+                          variant="kill"
+                          onClick={() => { killPlayer(player); applyActionDone(); }}
+                        >
+                          Kill
+                        </Button>
+                      )}
+      
+                      {/* 🔮 Seer See Button */}
+                      {currentPlayer?.role === 'seer' && roomInfo.stage === 'night' && (
+                        <Button
+                          variant="outline"
+                          onClick={() => { seePlayer(player); applyActionDone(); }}
+                        >
+                          See
+                        </Button>
+                      )}
+      
+                      {/* 🧑‍⚕️ Doctor Save Button */}
+                      {currentPlayer?.role === 'doctor' && roomInfo.stage === 'night' && (
+                        <Button
+                          variant="outline"
+                          onClick={() => { savePlayer(player); applyActionDone(); }}
+                        >
+                          Save
+                        </Button>
+                      )}
+      
+                      {/* 🗳️ Voting button for day */}
+                      {roomInfo.stage === 'day' && (
+                        <Button
+                          variant="red"
+                          onClick={() => { voting(player); applyActionDone(); }}
+                        >
+                          Vote
+                        </Button>
+                      )}
                     </div>
-                ))}
+                  ))
+              }
             </div>
+      
             <DrawerFooter>
-            <DrawerClose>
-                <Button id='close-drawer' variant="outline">Cancel</Button>
-            </DrawerClose>
+              <DrawerClose>
+                <Button id="close-drawer" variant="outline">Cancel</Button>
+              </DrawerClose>
             </DrawerFooter>
-        </DrawerContent>
-            </Drawer>
-            {
-                modalOpen && <Modal prop={savedPlayer ? savedPlayer?.name + ' is saved' : playerToSeeRole?.name + ' is ' + playerToSeeRole?.role == 'wolf' ? playerToSeeRole?.name + ' is the wolf' : playerToSeeRole?.name + ' is not the wolf'} onCloseModal={() => setModalOpen(false)}/>
+          </DrawerContent>
+        </Drawer>
+      
+        {/* Modal logic for seer/doctor results */}
+        {modalOpen && (
+          <Modal
+            prop={
+              savedPlayer
+                ? `${savedPlayer?.name} is saved`
+                : playerToSeeRole?.name + ' is ' + (playerToSeeRole?.role === 'wolf' ? 'the wolf' : 'not the wolf')
             }
-        </div>
+            onCloseModal={() => setModalOpen(false)}
+          />
+        )}
+      </div>
+
     )
 }
 
