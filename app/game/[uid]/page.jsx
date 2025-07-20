@@ -100,6 +100,8 @@ export default function Game({ params }) {
 
         
 
+        
+
         const ApplyingRoles = async () => {
             const baseRoles = ['wolf', 'seer', 'doctor'];
 
