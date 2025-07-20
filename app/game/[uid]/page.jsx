@@ -102,6 +102,8 @@ export default function Game({ params }) {
 
         
 
+        
+
         const ApplyingRoles = async () => {
             const baseRoles = ['wolf', 'seer', 'doctor'];
 
@@ -197,7 +199,13 @@ export default function Game({ params }) {
 
         
         useEffect(()=>{
-          if(players && players.length !== 0){
+          if(players.filter(p => p.is_alive).length == 1){
+            if(players.find(p => p.is_alive)){
+              setWinner(players.find(p => p.is_alive).name);
+            }
+          }
+          if(players && players.length !== 0  ){
+            console.log('players alive is' + players.filter(p => p.is_alive).length);
           if (roomData.stage === 'night' && currentPlayer?.player_id === roomData.host_id && !botsActionsStarted) {
             runBotsActions();
             setBotsActionsStarted(true); // ✅ شغّل مرة واحدة فقط في هذه المرحلة

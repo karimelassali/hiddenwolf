@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { FaClock, FaHourglassHalf } from 'react-icons/fa';
 
-export const Countdown = ({ number = 2, target, usage, onComplete }) => {
+export const Countdown = ({ number = 20, target, usage, onComplete }) => {
   const [timeLeft, setTimeLeft] = useState(number);
   const router = useRouter();
 

@@ -30,18 +30,23 @@ export default function Home() {
   }, [fetchUser]);
     
 
+  // Function to handle the creation of a room
   const handleCreateRoom = () => {
+    // Check if the user is logged in and has an id
     if(user && user.id){
+      // Insert a new room into the database with the code, stage, round and host_id
       supabase.from('rooms').insert({
         code: shortId,
         stage: 'waiting',
         round: 1,
         host_id: user.id,
       })
+      // If the room is created successfully, show a success message and redirect to the room page
       .then(() => {
         toast.success(`Room ${shortId} created successfully`);
         router.push(`/room/${shortId}`);
       })
+      // If there is an error, show an error message
       .catch((error) => {
         toast.error(error.message);
       }) 
