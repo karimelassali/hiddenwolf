@@ -20,6 +20,8 @@ import { trackUserConnectivity } from "@/utils/trackUserconnectivity";
 import PlayersChat from "@/components/chat";
 import { AnimatedTooltipPeople } from "@/components/tooltip";
 
+import {updatePlayerState} from '@/utils/updatePlayerState';
+
 const StageResult = dynamic(() => import("@/components/ui/stageResult"), {
   ssr: false,
 });
@@ -197,6 +199,8 @@ export default function Game({ params }) {
   };
 
   useEffect(() => {
+    
+
     const checkWinner = async () => {
       // **Change 1:** Filter the players array only once and store the result in a variable
       const alivePlayers = players.filter((p) => p.is_alive);
@@ -213,12 +217,29 @@ export default function Game({ params }) {
             .from("rooms")
             .update({ stage: "ended" })
             .eq("id", roomId);
+            if(winner.player_id == currentPlayer.player_id){
+              const playerState = {
+                player_id: currentPlayer.id,
+                win : true,
+              };
+              updatePlayerState(user.id, playerState);
+            }
+
         } else {
           await supabase
             .from("rooms")
             .update({ stage: "ended" })
             .eq("id", roomId);
           setWinner(winner);
+          if(winner.player_id == currentPlayer.player_id){
+            const playerState = {
+              player_id: winner.player_id,
+              win : true,
+            };
+            updatePlayerState(user.id, playerState);
+
+          }
+
         }
       }
       // **Change 5:** Simplify the condition to check if there are more than one alive players and none of them are wolves

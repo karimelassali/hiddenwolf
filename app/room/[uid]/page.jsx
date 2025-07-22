@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import {Countdown} from '@/components/ui/countdown'
 import { addBotsIfNeede } from '@/utils/addBotsIfNeeded'
 import {trackUserConnectivity} from '@/utils/trackUserconnectivity'
+import { updatePlayerState } from '@/utils/updatePlayerState'
 
 import { quotes } from '@/utils/quotes'
 
@@ -117,7 +118,14 @@ export default function Room({params}) {
         }
     };
 
+    const updatePlayerTotaleGames = async () => {
+        const data = {
+            newGame : true
+        };
 
+        //Add A new game for the player.
+        updatePlayerState(user.id , data);
+    }
     useEffect(() => {
         const initialize = async () => {
             if (user.fullName) {
@@ -151,7 +159,6 @@ export default function Room({params}) {
         }
     }
     fetchPlayers();
-    console.log('✅ filter used:', `room_id=eq.${roomId}`)
 
     const subscription = supabase
     .channel('players_channel')
@@ -213,6 +220,7 @@ export default function Room({params}) {
 
     useEffect(()=>{
         if(roomData.stage === 'night'){
+            updatePlayerTotaleGames()
             // router.push(`/game/${roomData.code}`);
            setHasRoomBeenPlayed(true);
 
@@ -326,3 +334,5 @@ export default function Room({params}) {
      
     )
 }
+
+
