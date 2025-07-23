@@ -516,7 +516,7 @@ export default function Game({ params }) {
           <GiWolfHowl className="text-2xl" />
         </motion.button>
         {players && <SidePlayers players={players} />}
-        //
+        
         {roomData && currentPlayer && (
           <GameBox
             roomData={roomData}
@@ -531,6 +531,7 @@ export default function Game({ params }) {
               playerID={currentPlayer?.id}
               playerName={currentPlayer?.name}
               is_alive={currentPlayer?.is_alive}
+              player_role={currentPlayer?.role}
             />
           )}
         </div>

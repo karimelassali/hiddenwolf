@@ -8,8 +8,10 @@ import { supabase } from "@/lib/supabase";
 import { useUser } from "@clerk/nextjs";
 import { Toaster, toast } from "react-hot-toast";
 import { GiWolfHowl } from "react-icons/gi";
+import { Killed } from "@/utils/sounds";
 
 export default function Home() {
+  Killed()
   const fetchUser = useUser();
 
   const [user, setUser] = useState([]);
