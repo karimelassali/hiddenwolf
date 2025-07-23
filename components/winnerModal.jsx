@@ -2,11 +2,26 @@ import { motion } from 'framer-motion';
 import { FaTrophy, FaSkull, FaCrown, FaHome, FaUsers } from 'react-icons/fa';
 import { GiVillage } from 'react-icons/gi';
 import { Countdown } from './ui/countdown';
+import {updatePlayerState} from "@/utils/updatePlayerState"
+import { useEffect , useState} from 'react';
 
-export default function GameWinner({winner}) {
+export default function GameWinner({winner,playerId,clerkId}) {
 
  const isWolfWin = winner?.role.toLowerCase().includes('wolf');
  const isVillageWin = winner?.role.toLowerCase().includes('village');
+
+ const [playerStateUpdated, setPlayerStateUpdated] = useState(false);
+
+ useEffect(()=>{
+  if(playerStateUpdated) return;
+  try {
+    const isCurrentUserWon = winner.player_id === playerId ? true : false;
+    updatePlayerState(clerkId , {win: isCurrentUserWon});
+    setPlayerStateUpdated(true);
+  } catch (error) {
+    console.log('update user state from winnerModal' + error)
+  }
+ },[winner])
  
  return (
    <motion.div 

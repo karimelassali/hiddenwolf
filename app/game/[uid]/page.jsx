@@ -47,6 +47,7 @@ export default function Game({ params }) {
   const [winnerModal, setWinnerModal] = useState(false);
   const [botsActionsStarted, setBotsActionsStarted] = useState(false);
   const [sidePlayersOpen, setSidePlayersOpen] = useState(false);
+  
 
   const resolvedParams = React.use(params);
 
@@ -217,13 +218,8 @@ export default function Game({ params }) {
             .from("rooms")
             .update({ stage: "ended" })
             .eq("id", roomId);
-            if(winner.player_id == currentPlayer.player_id){
-              const playerState = {
-                player_id: currentPlayer.id,
-                win : true,
-              };
-              updatePlayerState(user.id, playerState);
-            }
+            
+            
 
         } else {
           await supabase
@@ -231,14 +227,8 @@ export default function Game({ params }) {
             .update({ stage: "ended" })
             .eq("id", roomId);
           setWinner(winner);
-          if(winner.player_id == currentPlayer.player_id){
-            const playerState = {
-              player_id: winner.player_id,
-              win : true,
-            };
-            updatePlayerState(user.id, playerState);
-
-          }
+          
+          
 
         }
       }
@@ -562,7 +552,7 @@ export default function Game({ params }) {
           status={currentPlayer?.is_alive}
         />
       )}
-      {winner && <GameWinner winner={winner} />}
+      {winner && <GameWinner winner={winner} playerID={currentPlayer?.id} clerkId={user?.id} />}
       {currentPlayer?.is_alive ? (
         <h1>You aare alive</h1>
       ) : (

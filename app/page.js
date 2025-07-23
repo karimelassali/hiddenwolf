@@ -47,6 +47,7 @@ export default function Home() {
     if (fetchUser.isLoaded) {
       setUser(fetchUser.user);
       checkIfPlayerRegistred();
+      console.log('loop')
     }
   }, [fetchUser]);
 
