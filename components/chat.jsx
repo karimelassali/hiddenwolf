@@ -53,48 +53,83 @@ export default function PlayersChat({
 
   return (
     <>
-      <div className="flex flex-col overflow-hidden w-full h-full p-4">
-        <div className="max-h-[90%] overflow-y-auto">
+      <motion.div
+      initial={{ opacity: 0 ,x:50}}
+      animate={{ opacity: 1 ,x:0}}
+      transition={{ duration: 0.5 }}
+      className="flex flex-col h-screen w-full bg-gradient-to-br from-indigo-50 to-indigo-100 p-4">
+        <div className="flex-1 overflow-y-auto pb-4 space-y-3">
           {messages &&
-            messages.map((message) => (
-              <motion.div
-                key={message.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="flex flex-col py-3 bg-white shadow-md rounded-lg mb-3"
-              >
-                <div className="flex justify-between items-center px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-t-lg">
-                  <span className="font-semibold text-gray-800">{message.player_name}</span>
-                  <p className="text-xs text-gray-600">
-                    {new Date(message.created_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-                <p className="px-4 py-3 text-sm text-gray-700">{message.message}</p>
-              </motion.div>
-            ))}
+            messages.map((message) => {
+              const isMe = message.player_id === playerID; // Assume you have currentPlayerName variable
+              return (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[70%] ${
+                      isMe ? "bg-indigo-500" : "bg-white"
+                    } shadow-md rounded-lg`}
+                  >
+                    <div
+                      className={`flex justify-between w-full items-center px-4 py-2 ${
+                        isMe
+                          ? "bg-indigo-600"
+                          : "bg-gradient-to-r from-indigo-100 to-indigo-200"
+                      } rounded-t-lg`}
+                    >
+                      <span
+                        className={`font-semibold ${
+                          isMe ? "text-white" : "text-indigo-800"
+                        }`}
+                      >
+                        {message.player_name}
+                      </span>
+                      <p
+                        className={`text-xs ${
+                          isMe ? "text-indigo-200" : "text-indigo-600"
+                        }`}
+                      >
+                        {new Date(message.created_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <p
+                      className={`px-4 py-3 text-sm ${
+                        isMe ? "text-white" : "text-gray-700"
+                      }`}
+                    >
+                      {message.message}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
         </div>
-        <div className="mt-4 flex justify-between items-center p-2 ">
+        <div className="flex items-center gap-2 p-2 bg-white rounded-lg shadow-md border border-indigo-200">
           <input
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             type="text"
-            className="w-full px-4 py-2 border rounded-md"
+            className="flex-1 px-4 py-2 border border-indigo-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             placeholder="Type a message..."
           />
           <button
             onClick={() => {
               sendMessage();
             }}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md ml-2"
+            className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-md transition-colors"
           >
-            Send{" "}
+            Send
           </button>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

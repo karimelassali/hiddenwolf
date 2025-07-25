@@ -13,3 +13,20 @@ export function Notification(){
     });
     sound.play();
 }
+
+
+
+
+export function HowlSound(){
+    const sound = new Howl({
+        src: ['/assets/sounds/howl.mp3']
+    });
+    sound.play();
+}
+
+export function JoinSound(){
+    const sound = new Howl({
+        src: ['/assets/sounds/join.mp3']
+    });
+    sound.play();
+}

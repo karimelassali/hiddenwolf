@@ -14,13 +14,21 @@ import GameActionsBar from "@/components/blocks/game-actions-bar";
 import { RolesModal } from "@/components/ui/rolesModal";
 import { useUser } from "@clerk/nextjs";
 import { toast, Toaster } from "react-hot-toast";
-import { kill, seePlayer, savePlayer, voting } from "@/utils/botsActions";
+import {
+  kill,
+  seePlayer,
+  savePlayer,
+  voting,
+  messaging,
+} from "@/utils/botsActions";
 import { Countdown } from "@/components/ui/countdown";
 import { trackUserConnectivity } from "@/utils/trackUserconnectivity";
 import PlayersChat from "@/components/chat";
 import { AnimatedTooltipPeople } from "@/components/tooltip";
 
-import {updatePlayerState} from '@/utils/updatePlayerState';
+import { HowlSound } from "@/utils/sounds";
+
+import { updatePlayerState } from "@/utils/updatePlayerState";
 
 const StageResult = dynamic(() => import("@/components/ui/stageResult"), {
   ssr: false,
@@ -47,7 +55,6 @@ export default function Game({ params }) {
   const [winnerModal, setWinnerModal] = useState(false);
   const [botsActionsStarted, setBotsActionsStarted] = useState(false);
   const [sidePlayersOpen, setSidePlayersOpen] = useState(false);
-  
 
   const resolvedParams = React.use(params);
 
@@ -69,6 +76,30 @@ export default function Game({ params }) {
       }
     }
   }, [user, players]);
+
+  function roomsRealtimeListening(roomId, fetchRoomData) {
+    const subscription = supabase
+      .channel("room_listening_channel")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "rooms",
+          //i should make a filter here
+          filter: `id=eq.${roomId}`,
+        },
+        (payload) => {
+          setRoomData(payload.new);
+        }
+      )
+      .subscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
+  }
+
+ 
 
   const fetchRoomData = async () => {
     const { data: roomData, error } = await supabase
@@ -166,6 +197,7 @@ export default function Game({ params }) {
           if (bot.is_action_done) return;
           if (bot.is_alive) {
             await voting(bot, randomTarget, roomId);
+            await messaging(bot, roomId);
           }
         });
       }
@@ -200,8 +232,6 @@ export default function Game({ params }) {
   };
 
   useEffect(() => {
-    
-
     const checkWinner = async () => {
       // **Change 1:** Filter the players array only once and store the result in a variable
       const alivePlayers = players.filter((p) => p.is_alive);
@@ -218,18 +248,12 @@ export default function Game({ params }) {
             .from("rooms")
             .update({ stage: "ended" })
             .eq("id", roomId);
-            
-            
-
         } else {
           await supabase
             .from("rooms")
             .update({ stage: "ended" })
             .eq("id", roomId);
           setWinner(winner);
-          
-          
-
         }
       }
       // **Change 5:** Simplify the condition to check if there are more than one alive players and none of them are wolves
@@ -309,6 +333,16 @@ export default function Game({ params }) {
       }
     }
   }, [roomData.stage]);
+
+  //Listen to room sounds
+  useEffect(() => {
+    if (roomData.sound && roomData.sound === "howl") {
+      HowlSound();
+    }
+    setTimeout(async () => {
+      await supabase.from("rooms").update({ sound: null }).eq("id", roomId);
+    }, 5000);
+  }, [roomData.sound]);
 
   //Fetching the voting data from voting table
 
@@ -392,7 +426,7 @@ export default function Game({ params }) {
         />
       )}
       {/* {JSON.stringify(currentPlayer)} */}
-      <div className="flex w-full justify-between flex-col md:flex-row gap-4">
+      <div className="flex h-auto pb-30   min-h-[90%] w-full justify-between flex-col md:flex-row gap-4">
         {players
           .filter((p) => p.voted_to != null)
           .map((player) => {
@@ -516,7 +550,7 @@ export default function Game({ params }) {
           <GiWolfHowl className="text-2xl" />
         </motion.button>
         {players && <SidePlayers players={players} />}
-        
+
         {roomData && currentPlayer && (
           <GameBox
             roomData={roomData}
@@ -525,7 +559,7 @@ export default function Game({ params }) {
           />
         )}
         <div className="chat">
-          {roomId && currentPlayer && (
+          {roomId && roomData.stage == "day" && currentPlayer && (
             <PlayersChat
               roomID={roomId}
               playerID={currentPlayer?.id}
@@ -553,37 +587,18 @@ export default function Game({ params }) {
           status={currentPlayer?.is_alive}
         />
       )}
-      {winner && <GameWinner winner={winner} playerID={currentPlayer?.id} clerkId={user?.id} />}
-      {currentPlayer?.is_alive ? (
-        <h1>You aare alive</h1>
-      ) : (
-        <h1>You are dead</h1>
+      {winner && (
+        <GameWinner
+          winner={winner}
+          playerID={currentPlayer?.id}
+          clerkId={user?.id}
+          currentPlayerRole={currentPlayer?.role}
+        />
       )}
     </>
   );
 }
 
-function roomsRealtimeListening(roomId, fetchRoomData) {
-  const subscription = supabase
-    .channel("room_listening_channel")
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "rooms",
-        //i should make a filter here
-        filter: `id=eq.${roomId}`,
-      },
-      (payload) => {
-        fetchRoomData();
-      }
-    )
-    .subscribe();
-  return () => {
-    subscription.unsubscribe();
-  };
-}
 
 function playersRealtimeListening(roomId, fetchPlayers) {
   const subscription = supabase
@@ -597,12 +612,11 @@ function playersRealtimeListening(roomId, fetchPlayers) {
         filter: `room_id=eq.${roomId}`,
       },
       (payload) => {
-        fetchPlayers();
+        fetchPlayers()
       }
     )
     .subscribe();
   return () => {
     subscription.unsubscribe();
   };
-  
 }

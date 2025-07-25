@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase";
 export async function updatePlayerState(playerId, data) {
-    console.log(data.newGame+ 'datttttttttttttttttttttttttttttt');
   try {
     //Fetch player current state
     const { data: currentPlayer, error: playerError } = await supabase

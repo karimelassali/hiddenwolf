@@ -7,7 +7,7 @@ export default function SidePlayers({players}){
            initial={{ x: -300, opacity: 0 }}
            animate={{ x: 0, opacity: 1 }}
            transition={{ duration: 0.5 }}
-           className="w-80 bg-gradient-to-b from-slate-800 to-slate-900 border-r border-slate-700/50 shadow-2xl"
+           className="w-80 bg-gradient-to-b  from-slate-800 to-slate-900 border-r border-slate-700/50 shadow-2xl"
        >
            <div className="p-6 border-b border-slate-700/50">
                <h2 className="text-2xl font-bold text-slate-200 flex items-center gap-3">
@@ -25,7 +25,7 @@ export default function SidePlayers({players}){
                        initial={{ opacity: 0, y: 20 }}
                        animate={{ opacity: 1, y: 0 }}
                        transition={{ delay: index * 0.1 }}
-                       className={`relative p-4 rounded-xl border transition-all duration-300 hover:shadow-lg ${
+                       className={`relative p-4 w-full rounded-xl border transition-all duration-300 hover:shadow-lg ${
                            player.is_alive 
                                ? 'bg-gradient-to-r from-slate-700/50 to-slate-800/50 border-slate-600/50 hover:border-slate-500/50' 
                                : 'bg-gradient-to-r from-red-900/20 to-red-800/20 border-red-800/30 opacity-75'
@@ -67,7 +67,7 @@ export default function SidePlayers({players}){
                                    <div className="flex items-center gap-2">
                                        <span className="text-slate-400 text-sm">Role:</span>
                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                           player.role === 'Mafia' 
+                                           player.role === 'wolf' 
                                                ? 'bg-red-600/20 text-red-400 border border-red-600/30'
                                                : player.role === 'Doctor'
                                                ? 'bg-green-600/20 text-green-400 border border-green-600/30'
@@ -79,21 +79,8 @@ export default function SidePlayers({players}){
                                        </span>
                                    </div>
                                    
-                                   <div className="flex items-center justify-between">
-                                       <div className="flex items-center gap-2">
-                                           <span className="text-slate-400 text-sm">Status:</span>
-                                           {player.is_alive ? (
-                                               <div className="flex items-center gap-1 text-green-400">
-                                                   <FaCheckCircle className="text-xs" />
-                                                   <span className="text-xs font-medium">Alive</span>
-                                               </div>
-                                           ) : (
-                                               <div className="flex items-center gap-1 text-red-400">
-                                                   <FaTimesCircle className="text-xs" />
-                                                   <span className="text-xs font-medium">Dead</span>
-                                               </div>
-                                           )}
-                                       </div>
+                                   <div className="flex items-center w-full justify-between">
+                                       
                                        
                                        <div className="flex items-center gap-2">
                                            <span className="text-slate-400 text-sm">Action:</span>

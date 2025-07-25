@@ -117,7 +117,7 @@ export default function GameNavbar({uid,roomData,currentPlayerId,players}) {
   return (
     <>
     <Toaster />
-    <nav className='w-full p-5 flex justify-between items-center bg-[#6c47ff] text-white'>
+    <nav className='w-full  top-0 z-50  p-5 flex justify-between items-center bg-[#6c47ff] text-white'>
 {
     roomData.host_id == currentPlayerId && ('hello host')
 }

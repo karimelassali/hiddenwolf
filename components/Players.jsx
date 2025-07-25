@@ -12,12 +12,12 @@ export  function Players({fetched_players,room_host_id}) {
                         return (
                             <div key={player.id} className="m-4 relative flex backdrop-blur-lg border-l border-b border-slate-400 justify-between items-center p-5 gap-10 rounded-lg">
                                 <Image className="w-20 h-20 rounded-full" width={100} height={100} src={player.profile} alt="player profile pic" />
-                                <p className="text-2xl text-center text-white">{player.name}</p>
+                                <p className="text-2xl text-center font-karla  text-white">{player.name}</p>
                                 
                                 {
                                     player.player_id === room_host_id && (
                                         <div className="flex absolute top-[-30px] left-0  items-center gap-2 animate-pulse">
-                                            <FaCrown className="text-yellow-500 text-2xl" size={50} />
+                                            <FaCrown className="text-slate-900 text-2xl " size={50} />
                                         </div>
                                     )
                                 }

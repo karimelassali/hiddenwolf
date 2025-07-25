@@ -33,10 +33,10 @@ export default function RootLayout({ children }) {
      * allows us to use the Clerk hooks and components.
      */
     <ClerkProvider>
-      <html className="h-full" lang="en">
-        <body className={`antialiased h-full`}>
-          {/* The navbar component renders the navigation bar at the top of the page */}
+      <html className="h-full scrollbar-hide" lang="en">
+        <body className={`scrollbar-hide antialiased h-full`}>
           <Navbar />
+          {/* The navbar component renders the navigation bar at the top of the page */}
           {/* The children prop is the current page */}
           {children}
         </body>

@@ -6,7 +6,7 @@ export async function addBotsIfNeede(roomID,botCount){
     const baseRoles = ['wolf', 'seer', 'doctor'];
     const bots = [];
     for (let i = 0; i < botCount; i++) {
-        const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${faker.person.firstName()}`;
+        const avatarUrl = `https://api.dicebear.com/7.x/adventurer/svg?seed=${faker.person.firstName()}`;
 
         bots.push({
             room_id: roomID,
