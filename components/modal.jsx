@@ -1,5 +1,7 @@
 import { X, Users, Coins, Trophy, Zap, Crown, Star } from "lucide-react";
 import { useEffect, useState } from "react";
+import { PiCoins } from "react-icons/pi";
+
 
 export function Modal({ prop, onClose, usage, votingData, onCloseModal }) {
   const [confetti, setConfetti] = useState([]);
@@ -80,7 +82,7 @@ export function Modal({ prop, onClose, usage, votingData, onCloseModal }) {
         return {
           title: 'Free Coins!',
           subtitle: '',
-          icon: <Coins className="w-8 h-8" />,
+          icon: <PiCoins className="w-8 h-8" />,
           gradient: 'from-violet-500 via-purple-500 to-violet-600',
           glowColor: 'shadow-purple-500/50',
           borderGlow: '',
@@ -221,7 +223,7 @@ export function Modal({ prop, onClose, usage, votingData, onCloseModal }) {
                className={`inline-block p-4 rounded-2xl bg-gradient-to-r ${config.gradient} ${config.glowColor} shadow-2xl mb-6 `}>
                 {config.icon}
               </div>
-              <p className="text-2xl text-white font-semibold  leading-relaxed mb-2">{prop}</p>
+              <p className="text-3xl font-karla  flex items-center justify-center  font-semibold text-amber-200  gap-2 leading-relaxed mb-2">{prop} <PiCoins /></p>
               {/* {usage === 'coins' && (
                 <p className="text-yellow-400 font-bold text-lg animate-pulse">🎉 REWARD EARNED! 🎉</p>
               )} */}

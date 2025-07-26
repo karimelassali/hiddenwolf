@@ -16,6 +16,9 @@ import Image from "next/image";
 import { MdLockOutline } from "react-icons/md";
 
 import { useUser } from "@clerk/nextjs";
+import { CustomAudioPlayer } from "@/components/audioPlayer";
+
+// Custom Audio Player Component
 
 export default function Page() {
   const [chosedCategory, setChosedCategory] = useState("Avatars");
@@ -87,10 +90,10 @@ export default function Page() {
       .update({ coins: playerState.coins - chosedItem.price })
       .eq("player_id", user.id);
     await supabase.from("purchases").insert({
-        user_id: user.id,
-        item_id: chosedItem.id,
+      user_id: user.id,
+      item_id: chosedItem.id,
     });
-    
+
     setPlayerState({ coins: playerState.coins - chosedItem.price });
     setChosedItem(null);
   };
@@ -110,32 +113,6 @@ export default function Page() {
       }}
       className="w-full h-full flex flex-col items-center justify-center gap-8 relative overflow-hidden"
     >
-      {/* Animated background overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/30 via-blue-900/20 to-cyan-900/30 " />
-
-      {/* Floating particles effect */}
-      <div className="absolute inset-0 overflow-hidden  pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-violet-400/30 rounded-full"
-            initial={{
-              x: Math.random() * Math.random(),
-              y: Math.random() * Math.random(),
-            }}
-            animate={{
-              y: [null, Math.random() * Math.random()],
-              x: [null, Math.random() * Math.random()],
-            }}
-            transition={{
-              duration: Math.random() * 10 + 10,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          />
-        ))}
-      </div>
-
       {/* Header */}
       <motion.div
         initial={{ y: -100, opacity: 0 }}
@@ -167,7 +144,9 @@ export default function Page() {
           <PiCoins className="text-yellow-400 text-2xl" />
           <div className="text-white">
             <div className="font-bold text-xl text-yellow-400">
-              {playerState.coins}
+              {playerState.coins.toLocaleString("en-US", {
+                currency: "EUR",
+              })}
             </div>
           </div>
         </div>
@@ -256,23 +235,36 @@ export default function Page() {
                   onHoverEnd={() => setHoveredItem(null)}
                   className="group relative bg-gradient-to-br  from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-700/50 hover:border-cyan-400/50 transition-all duration-300 cursor-pointer"
                 >
-                  {/* Item Image */}
+                  {/* Item Image/Audio Player */}
                   <div
                     style={{
                       backgroundImage: `url("/assets/images/bg.png")`,
                       backgroundSize: "cover",
                       backgroundRepeat: "no-repeat",
                     }}
-                    className="relative h-48 overflow-hidden"
+                    className="relative h-48 flex items-center overflow-hidden"
                   >
-                    <motion.img
-                      src={item.item_url}
-                      alt={item.item}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    />
+                    {item.category === "Sounds" && (
+                      <div className="w-full h-full">
+                        <CustomAudioPlayer
+                          src={item.item_url}
+                          itemName={item.item}
+                        />
+                      </div>
+                    )}
 
-                    {/* Overlay gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    {item.category === "Avatars" && (
+                      <motion.img
+                        src={item.item_url}
+                        alt={item.item}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                    )}
+
+                    {/* Overlay gradient for non-sound items */}
+                    {item.category !== "Sounds" && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    )}
 
                     {/* Rating stars */}
                     <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
@@ -352,6 +344,7 @@ export default function Page() {
           onConfirm={confirmPurchasing}
         />
       )}
+
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;
@@ -367,10 +360,37 @@ export default function Page() {
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: linear-gradient(to bottom, #0891b2, #7c3aed);
         }
+
+        /* Custom slider styling */
+        .slider {
+          appearance: none;
+          background: rgba(107, 114, 128, 0.5);
+          border-radius: 5px;
+          outline: none;
+        }
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: linear-gradient(45deg, #06b6d4, #8b5cf6);
+          cursor: pointer;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .slider::-moz-range-thumb {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: linear-gradient(45deg, #06b6d4, #8b5cf6);
+          cursor: pointer;
+          border: none;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
       `}</style>
     </div>
   );
 }
+
 
 export function PurchaseConfirming({
   chosedItem,
@@ -394,11 +414,20 @@ export function PurchaseConfirming({
 
         {/* Item Preview */}
         <div className="flex items-center gap-4 mb-6 p-4 bg-black/30 rounded-lg">
-          <img
-            src={chosedItem?.item_url}
-            alt={chosedItem?.item}
-            className="w-16 h-16 object-cover rounded-lg"
-          />
+          {
+            chosedItem.category == "Sounds" ? (
+              <Volume2 />
+            ):(
+              <Image
+              src={chosedItem?.item_url}
+              alt={chosedItem?.item}
+              width={64}
+              height={64}
+              className="w-16 h-16 object-cover rounded-lg"
+            />
+            )
+          }
+         
           <div className="flex-1">
             <h4 className="text-white font-semibold">{chosedItem?.item}</h4>
             <p className="text-gray-400 text-sm">{chosedItem?.category}</p>

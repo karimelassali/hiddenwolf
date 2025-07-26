@@ -21,6 +21,7 @@ export async function updatePlayerState(playerId, data) {
           data && data.newGame
             ? currentPlayer.total_games + 1
             : currentPlayer.total_games,
+        coins:data && data.prize ? currentPlayer.coins + data.prize : currentPlayer.coins,
       }
     ;
 
@@ -32,6 +33,7 @@ export async function updatePlayerState(playerId, data) {
         total_games: playerNewStates.newGame,
         wins: playerNewStates.win,
         losses: playerNewStates.lose,
+        coins: playerNewStates.prize,
       })
       .eq("player_id", playerId);
     updateError && console.log(updateError);

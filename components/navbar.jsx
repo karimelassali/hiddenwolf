@@ -2,12 +2,13 @@ import { NetworkTracking } from "./networkTracking";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { SignInButton, SignUpButton } from "@clerk/nextjs";
 import { GiWolfHowl } from "react-icons/gi";
+import {BackgroundSound} from "@/utils/sounds";
 
 export const Navbar = () => {
 
   return (
     <header className="flex justify-between items-center overflow-hidden p-5 gap-4 h-16"> 
-
+      {BackgroundSound()}
     <div className="flex items-center gap-2">
       <GiWolfHowl size={50} />
       <h5 className="text-xl font-bold">The Hidden Wolf</h5>

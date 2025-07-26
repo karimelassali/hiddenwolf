@@ -30,3 +30,30 @@ export function JoinSound(){
     });
     sound.play();
 }
+
+
+export let backgroundSound;
+export function BackgroundSound(){
+    if(backgroundSound === undefined){
+        backgroundSound = new Howl({
+            src: ['/assets/sounds/background.mp3'],
+            loop: true,
+            volume: 0.1, // Set the volume to 0.2
+        });
+        backgroundSound.play();
+    }
+}
+
+export function WinSound(){
+    const sound = new Howl({
+        src: ['/assets/sounds/win.mp3']
+    });
+    sound.play();
+}
+
+export function LoseSound(){
+    const sound = new Howl({
+        src: ['/assets/sounds/lose.mp3']
+    });
+    sound.play();
+}

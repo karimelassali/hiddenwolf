@@ -4,6 +4,9 @@ import { GiVillage } from "react-icons/gi";
 import { Countdown } from "./ui/countdown";
 import { updatePlayerState } from "@/utils/updatePlayerState";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {Modal} from "./modal";
+import {WinSound,LoseSound} from "@/utils/sounds";
 
 export default function GameWinner({
   winner,
@@ -16,6 +19,10 @@ export default function GameWinner({
 
   const [playerStateUpdated, setPlayerStateUpdated] = useState(false);
 
+  const [prize,setPrize] = useState(0);
+
+  const router = useRouter();
+
   useEffect(() => {
     if (playerStateUpdated) return;
     try {
@@ -23,11 +30,17 @@ export default function GameWinner({
       const isCurrentUserWon =
         (winner.role === "wolf" && currentPlayerRole === "wolf") ||
         (winner.role !== "wolf" && currentPlayerRole !== "wolf");
+        const prizeAmount = ['10','20','30','40','50','60','70','80','90','100'];
+        const randomPrize = prizeAmount[Math.floor(Math.random() * prizeAmount.length)];
+      if(isCurrentUserWon){
+        setPrize(randomPrize);
+        WinSound();
+      }else{
+        LoseSound();
+      }
         
-      console.log(
-        "--------- winner is" + isCurrentUserWon + JSON.stringify(winner)
-      );
-      updatePlayerState(clerkId, { win: isCurrentUserWon });
+      
+      updatePlayerState(clerkId, { win: isCurrentUserWon, prize: isCurrentUserWon ? randomPrize : null });
       setPlayerStateUpdated(true);
     } catch (error) {
       console.log("update user state from winnerModal" + error);
@@ -40,7 +53,11 @@ export default function GameWinner({
       animate={{ opacity: 1 }}
       className="fixed top-0 left-0 w-full h-full  backdrop-blur-lg z-50 flex items-center justify-center"
     >
-      {console.log("hello world")}
+      {
+        prize > 0 && (
+          <Modal usage={'coins'} prop={prize} onCloseModal={() => setPrize(0)} />
+        )
+      }
       <motion.div
         initial={{ scale: 0.5, y: 50, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
@@ -147,7 +164,7 @@ export default function GameWinner({
           className="text-center"
         >
           <button
-            onClick={() => (window.location.href = "/")}
+            onClick={() => router.push("/")}
             className="group w-full relative overflow-hidden bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 border border-slate-600/50 hover:shadow-xl hover:scale-105"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>

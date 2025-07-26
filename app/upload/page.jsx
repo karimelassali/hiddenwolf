@@ -97,7 +97,7 @@ export default function UploadStoreItem() {
       <div className="flex items-center space-x-2">
         <label className="text-sm font-medium text-gray-700 dark:text-white" htmlFor="image">Upload Image</label>
       </div>
-      <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} className="w-full px-4 py-2 border rounded-md" id="image" />
+      <input type="file"  onChange={e => setImageFile(e.target.files[0])} className="w-full px-4 py-2 border rounded-md" id="image" />
 
       <Button onClick={handleSubmit} disabled={loading} className="w-full">
         {loading ? "Uploading..." : "Upload Item"}
