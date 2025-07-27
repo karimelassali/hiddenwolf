@@ -323,7 +323,7 @@ export default function Room({ params }) {
                         console.log(error);
                       }
                     } else {
-                      addBotsIfNeede(roomId, 15- players.length);
+                      addBotsIfNeede(roomId, 4 - players.length);
                       const { data, error } = await supabase
                         .from("rooms")
                         .update({ stage: "night" })
