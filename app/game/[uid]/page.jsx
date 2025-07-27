@@ -92,9 +92,7 @@ export default function Game({ params }) {
         },
         (payload) => {
           setRoomData(payload.new);
-          if(payload.new.roles_assigned){
-            setRolesAssigned(true);
-          }
+          
         }
       )
       .subscribe();
@@ -420,7 +418,7 @@ export default function Game({ params }) {
           Make me alive
         </button>
       </div>
-      {rolesAssigned && currentPlayer && players && (
+      {roomData.roles_assigned && currentPlayer && players && (
         <GameNavbar
           roomData={roomData}
           uid={uid}
@@ -440,7 +438,7 @@ export default function Game({ params }) {
               </p>
             );
           })}
-        {!rolesAssigned && user?.id === roomData.host_id ? (
+        {!roomData.roles_assigned && user?.id === roomData.host_id ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -462,7 +460,7 @@ export default function Game({ params }) {
 
                 <h3 className="text-2xl font-bold text-slate-200 mb-2">
                   Ready to Assign Roles?
-                  {rolesAssigned ? "Roles are assigned" : 'Not yet'}
+                  {roomData.roles_assigned ? "Roles are assigned" : 'Not yet'}
                 </h3>
                 <p className="text-slate-400">
                   Distribute roles to all players to begin the game
@@ -485,7 +483,7 @@ export default function Game({ params }) {
             </motion.div>
           </motion.div>
         ) : (
-          !rolesAssigned &&
+          !roomData.roles_assigned &&
           user?.id !== roomData.host_id && (
             <motion.div
               initial={{ opacity: 0 }}
