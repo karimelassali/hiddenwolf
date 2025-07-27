@@ -55,6 +55,7 @@ export default function Game({ params }) {
   const [winnerModal, setWinnerModal] = useState(false);
   const [botsActionsStarted, setBotsActionsStarted] = useState(false);
   const [sidePlayersOpen, setSidePlayersOpen] = useState(false);
+  const [rolesAssigned,setRolesAssigned] = useState(false);
 
   const resolvedParams = React.use(params);
 
@@ -91,7 +92,9 @@ export default function Game({ params }) {
         },
         (payload) => {
           setRoomData(payload.new);
-          fetchRoomData();
+          if(payload.new.roles_assigned){
+            setRolesAssigned(true);
+          }
         }
       )
       .subscribe();
@@ -417,7 +420,7 @@ export default function Game({ params }) {
           Make me alive
         </button>
       </div>
-      {roomData.roles_assigned && currentPlayer && players && (
+      {rolesAssigned && currentPlayer && players && (
         <GameNavbar
           roomData={roomData}
           uid={uid}
@@ -437,7 +440,7 @@ export default function Game({ params }) {
               </p>
             );
           })}
-        {!roomData.roles_assigned && user?.id === roomData.host_id ? (
+        {!rolesAssigned && user?.id === roomData.host_id ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -459,7 +462,7 @@ export default function Game({ params }) {
 
                 <h3 className="text-2xl font-bold text-slate-200 mb-2">
                   Ready to Assign Roles?
-                  {roomData.roles_assigned ? "Roles are assigned" : 'Not yet'}
+                  {rolesAssigned ? "Roles are assigned" : 'Not yet'}
                 </h3>
                 <p className="text-slate-400">
                   Distribute roles to all players to begin the game
@@ -482,7 +485,7 @@ export default function Game({ params }) {
             </motion.div>
           </motion.div>
         ) : (
-          !roomData.roles_assigned &&
+          !rolesAssigned &&
           user?.id !== roomData.host_id && (
             <motion.div
               initial={{ opacity: 0 }}

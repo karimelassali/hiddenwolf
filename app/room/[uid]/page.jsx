@@ -201,7 +201,12 @@ export default function Room({ params }) {
         },
         (payload) => {
           console.log("🚨 Rooms payload", payload);
-          fetchRoomData();
+          setRoomData(payload.new);
+          const newStage = payload.new?.stage;
+          if(newStage === 'night'){
+            updatePlayerTotaleGames();
+            setHasRoomBeenPlayed(true);
+          }
         }
       )
       .subscribe();
@@ -238,7 +243,7 @@ export default function Room({ params }) {
   ) : (
     <div
       style={{
-        backgroundImage: 'url("/assets/images/waitingBackground.png")',
+        backgroundImage: 'url("/assets/images/waitingBackground.webp")',
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
