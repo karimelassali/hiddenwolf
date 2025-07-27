@@ -57,3 +57,19 @@ export function LoseSound(){
     });
     sound.play();
 }
+
+
+export function CashSound(){
+    const sound = new Howl({
+        src: ['/assets/sounds/cash.mp3']
+    });
+    sound.play();
+}
+
+
+export function ClickSound(){
+    const sound = new Howl({
+        src:['/assets/sounds/click.mp3']
+    });
+    sound.play();
+}

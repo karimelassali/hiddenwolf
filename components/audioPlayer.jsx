@@ -33,12 +33,19 @@ export function CustomAudioPlayer({ src, itemName }) {
 
     const setAudioTime = () => setCurrentTime(audio.currentTime);
 
+    const handleAudioEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
+
     audio.addEventListener("loadeddata", setAudioData);
     audio.addEventListener("timeupdate", setAudioTime);
+    audio.addEventListener("ended", handleAudioEnded);
 
     return () => {
       audio.removeEventListener("loadeddata", setAudioData);
       audio.removeEventListener("timeupdate", setAudioTime);
+      audio.removeEventListener("ended", handleAudioEnded);
     };
   }, []);
 
@@ -59,8 +66,6 @@ export function CustomAudioPlayer({ src, itemName }) {
     audio.currentTime = percent * duration;
   };
 
-
-
   const formatTime = (time) => {
     if (isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
@@ -69,50 +74,56 @@ export function CustomAudioPlayer({ src, itemName }) {
   };
 
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-purple-900/30 via-blue-900/40 to-cyan-900/30 backdrop-blur-sm">
+    <div className="relative w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-gray-900/40 via-slate-900/50 to-black/60 backdrop-blur-sm">
       <audio ref={audioRef} src={src} />
 
       {/* Sound Wave Animation */}
       <div className="flex items-center gap-1 mb-4">
-          {isPlaying && [...Array(12)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="w-1 bg-gradient-to-t from-cyan-400 to-purple-400 rounded-full"
-              animate={{
-                height: isPlaying ? [8, 24, 12, 32, 16, 20] : 8,
-              }}
-              transition={{
-                duration: 0.8,
-                repeat: Infinity,
-                delay: i * 0.1,
-                ease: "easeInOut"
-              }}
-            />
-          ))}
-        </div>
+        {isPlaying && [...Array(12)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="w-1 bg-gradient-to-t from-gray-500 to-slate-400 rounded-full"
+            animate={{
+              height: isPlaying ? [8, 24, 12, 32, 16, 20] : 8,
+            }}
+            transition={{
+              duration: 0.8,
+              repeat: Infinity,
+              delay: i * 0.1,
+              ease: "easeInOut"
+            }}
+          />
+        ))}
+        {!isPlaying && [...Array(12)].map((_, i) => (
+          <div
+            key={i}
+            className="w-1 h-2 bg-gray-600/50 rounded-full"
+          />
+        ))}
+      </div>
 
       {/* Track Info */}
       <div className="text-center mb-4">
-        <h3 className="text-white font-semibold text-sm mb-1 truncate max-w-32">
+        <h3 className="text-gray-200 font-semibold text-sm mb-1 truncate max-w-32">
           {itemName}
         </h3>
-        <div className="text-xs text-gray-300">
+        <div className="text-xs text-gray-400">
           {formatTime(currentTime)} / {formatTime(duration)}
         </div>
       </div>
 
       {/* Progress Bar */}
       <div
-        className="w-full h-2 bg-gray-700/50 rounded-full mb-4 cursor-pointer relative overflow-hidden"
+        className="w-full h-2 bg-gray-800/60 rounded-full mb-4 cursor-pointer relative overflow-hidden border border-gray-700/30"
         onClick={handleSeek}
       >
         <motion.div
-          className="h-full bg-gradient-to-r from-cyan-400 to-purple-400 rounded-full relative"
+          className="h-full bg-gradient-to-r from-gray-600 to-slate-500 rounded-full relative"
           style={{ width: `${(currentTime / duration) * 100}%` }}
           initial={{ width: 0 }}
           animate={{ width: `${(currentTime / duration) * 100}%` }}
         >
-          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg" />
+          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-3 h-3 bg-gray-300 rounded-full shadow-lg border border-gray-600" />
         </motion.div>
       </div>
 
@@ -122,12 +133,12 @@ export function CustomAudioPlayer({ src, itemName }) {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={togglePlayPause}
-          className="p-3 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 transition-all duration-300 shadow-lg"
+          className="p-3 rounded-full bg-gradient-to-r from-gray-700 to-slate-800 hover:from-gray-600 hover:to-slate-700 transition-all duration-300 shadow-lg border border-gray-600/50"
         >
           {isPlaying ? (
-            <Pause className="text-white" size={16} />
+            <Pause className="text-gray-200" size={16} />
           ) : (
-            <Play className="text-white ml-0.5" size={16} />
+            <Play className="text-gray-200 ml-0.5" size={16} />
           )}
         </motion.button>
       </div>

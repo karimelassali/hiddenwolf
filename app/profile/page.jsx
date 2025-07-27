@@ -22,20 +22,24 @@ import {
   ArrowRight,
   Medal,
   MoveLeft,
+  Play,
+  Pause,
 } from "lucide-react";
 import { PiCoins } from "react-icons/pi";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-
+import { CustomAudioPlayer } from "@/components/audioPlayer";
+import {NumberCounting} from "@/components/magicui/number-ticker";
+import { ClickSound } from "@/utils/sounds";
 
 export default function Page() {
-  const [playerState, setPlayerState] = useState(null);
+  const [playerState, setPlayerState] = useState([]);
   const [playerInventory, setPlayerInventory] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [viewMode, setViewMode] = useState("grid"); // grid or list
+  const [viewMode, setViewMode] = useState("grid");
+  const [playingAudio, setPlayingAudio] = useState(null);
   const { isLoaded, user } = useUser();
   const router = useRouter();
-
- 
 
   const fetchUserState = async (playerId) => {
     const { data, error } = await supabase
@@ -55,13 +59,28 @@ export default function Page() {
     const { data, error } = await supabase
       .from("purchases")
       .select("*, store(*)")
-      .eq("user_id", playerId);
+      .eq("user_id", playerId)
+      .order("id", { ascending: true });
 
     if (error) {
       console.error("Error fetching user data:", error.message);
       return;
     }
-    setPlayerInventory(data);
+
+    //Remove Duplicated items
+    const seenStoreIds = new Set();
+    const uniquePurchases = [];
+
+    for (const purchase of data) {
+      const storeId = purchase.store.id;
+
+      if (!seenStoreIds.has(storeId)) {
+        seenStoreIds.add(storeId);
+        uniquePurchases.push(purchase);
+      }
+    }
+
+    setPlayerInventory(uniquePurchases);
   };
 
   useEffect(() => {
@@ -74,30 +93,30 @@ export default function Page() {
   const getRarityColor = (rarity) => {
     switch (rarity?.toLowerCase()) {
       case "common":
-        return "from-gray-400 to-gray-600";
+        return "from-gray-600 to-gray-800";
       case "rare":
-        return "from-blue-400 to-blue-600";
+        return "from-slate-600 to-slate-800";
       case "epic":
-        return "from-purple-400 to-purple-600";
+        return "from-purple-800 to-purple-900";
       case "legendary":
-        return "from-yellow-400 to-orange-500";
+        return "from-amber-700 to-orange-800";
       default:
-        return "from-gray-400 to-gray-600";
+        return "from-gray-600 to-gray-800";
     }
   };
 
   const getRarityGlow = (rarity) => {
     switch (rarity?.toLowerCase()) {
       case "common":
-        return "shadow-gray-500/20";
+        return "shadow-gray-700/20";
       case "rare":
-        return "shadow-blue-500/30";
+        return "shadow-slate-700/25";
       case "epic":
-        return "shadow-purple-500/30";
+        return "shadow-purple-700/30";
       case "legendary":
-        return "shadow-yellow-500/40";
+        return "shadow-amber-600/35";
       default:
-        return "shadow-gray-500/20";
+        return "shadow-gray-700/20";
     }
   };
 
@@ -113,6 +132,9 @@ export default function Page() {
         return Package;
     }
   };
+
+
+
 
   const filteredInventory =
     selectedCategory === "All"
@@ -136,15 +158,27 @@ export default function Page() {
 
   if (!isLoaded || !user || !playerState) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-purple-900 via-blue-900 to-cyan-900">
+      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-slate-900 to-black">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full"
+          className="w-16 h-16 border-4 border-gray-600 border-t-transparent rounded-full"
         />
       </div>
     );
   }
+
+  const equipAvatar = async (item) => {
+    ClickSound();
+    const { error } = await supabase
+      .from("player_stats")
+      .update({ avatar: item.store.item_url })
+      .eq("player_id", user.id);
+    if (error) {
+      console.log(error);
+    }
+    setPlayerState({avatar:item.store.item_url})
+  };
 
   return (
     <div
@@ -153,22 +187,23 @@ export default function Page() {
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
-      className="w-full relative h-full bg-gradient-to-br from-purple-900 via-blue-900 to-cyan-900 overflow-auto"
+      className="w-full relative h-full bg-gradient-to-br from-gray-900 via-slate-900 to-black overflow-auto"
     >
-      <motion.div 
-      onClick={()=>router.push('/')}
-      whileTap={{ scale: 0.9 }}
-      whileHover={{ scale: 1.1 }}
-      className="absolute z-40 bg-gradient-to-br from-purple-900 via-blue-900 to-cyan-900 bg-violet-500 rounded-full p-3 top-4 left-4">
-        <MoveLeft size={40} className="text-white cursor-pointer" />
+      <motion.div
+        onClick={() => router.push("/")}
+        whileTap={{ scale: 0.9 }}
+        whileHover={{ scale: 1.1 }}
+        className="absolute z-40 bg-gradient-to-br from-gray-800 to-slate-900 rounded-full p-3 top-4 left-4 border border-gray-700"
+      >
+        <MoveLeft size={40} className="text-gray-300 cursor-pointer" />
       </motion.div>
 
-      {/* Animated background particles */}
+      {/* Mysterious floating particles */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {[...Array(15)].map((_, i) => (
+        {[...Array(20)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute w-1 h-1 bg-cyan-400/30 rounded-full"
+            className="absolute w-1 h-1 bg-gray-600/20 rounded-full"
             initial={{
               x:
                 Math.random() *
@@ -188,9 +223,10 @@ export default function Page() {
                 Math.random() *
                   (typeof window !== "undefined" ? window.innerWidth : 1000),
               ],
+              opacity: [0.2, 0.8, 0.2],
             }}
             transition={{
-              duration: Math.random() * 15 + 10,
+              duration: Math.random() * 20 + 15,
               repeat: Infinity,
               ease: "linear",
             }}
@@ -204,22 +240,34 @@ export default function Page() {
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
-          className="bg-black/20 backdrop-blur-xl rounded-3xl border border-cyan-500/20 p-8 shadow-2xl"
+          className="bg-black/30 backdrop-blur-xl rounded-3xl border border-gray-700/30 p-8 shadow-2xl"
         >
-          <div className="flex flex-col lg:flex-row items-center gap-8">
+          <div className="flex flex-col lg:flex-row items-center gap-6">
             {/* Avatar Section */}
             <div className="relative">
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className="w-32 h-32 bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full p-1 shadow-2xl shadow-cyan-500/30"
+                className="w-32 h-32 bg-gradient-to-r from-gray-700 to-slate-800 rounded-full p-1 shadow-2xl shadow-gray-800/50"
               >
-                <div className="w-full h-full bg-gray-800 rounded-full flex items-center justify-center text-4xl font-bold text-white">
-                  {user.firstName?.charAt(0) || "P"}
+                <div className="w-full h-full bg-gray-900 rounded-full flex items-center justify-center text-4xl font-bold text-gray-300">
+                  {playerState?.avatar ? (
+                    <Image
+                      src={playerState?.avatar}
+                      alt="Avatar"
+                      width={100}
+                      height={100}
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-900 rounded-full flex items-center justify-center text-4xl font-bold text-gray-300">
+                      {user.firstName?.charAt(0) || "P"}
+                    </div>
+                  )}
                 </div>
               </motion.div>
 
               {/* Status indicator */}
-              <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-500 rounded-full border-4 border-gray-800 flex items-center justify-center">
+              <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-red-600 rounded-full border-4 border-gray-900 flex items-center justify-center">
                 <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
               </div>
             </div>
@@ -230,7 +278,7 @@ export default function Page() {
                 initial={{ x: -30, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.2 }}
-                className="text-4xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2"
+                className="text-4xl font-bold bg-gradient-to-r from-gray-300 via-slate-300 to-gray-400 bg-clip-text text-transparent mb-2"
               >
                 {user.firstName} {user.lastName}
               </motion.h1>
@@ -239,7 +287,7 @@ export default function Page() {
                 initial={{ x: -30, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="text-gray-300 text-lg mb-4"
+                className="text-gray-400 text-lg mb-3"
               >
                 {user.emailAddresses?.[0]?.emailAddress}
               </motion.p>
@@ -248,7 +296,7 @@ export default function Page() {
                 initial={{ x: -30, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="flex items-center justify-center lg:justify-start gap-4 text-sm text-gray-400"
+                className="flex items-center justify-center lg:justify-start gap-4 text-sm text-gray-500"
               >
                 <div className="flex items-center gap-1">
                   <Calendar size={16} />
@@ -269,14 +317,15 @@ export default function Page() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.5, type: "spring" }}
-              className="bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-2xl p-2 border border-yellow-500/30"
+              className="bg-gradient-to-r from-amber-900/20 to-orange-900/20 rounded-2xl p-2 border border-amber-800/30"
             >
               <div className="text-center">
-                <div className="flex items-center justify-center gap-2 text-3xl font-bold text-yellow-400 mb-1">
+                <div className="flex items-center justify-center gap-2 text-3xl font-bold text-amber-500 mb-1">
                   <PiCoins size={32} />
-                  <span>{playerState.coins.toLocaleString('en-US', {currency: 'EUR' })}</span>
+                  <NumberCounting value={playerState?.coins || 0} />
+                  
                 </div>
-                <p className="text-yellow-200 text-sm">Total Coins</p>
+                {/* <p className="text-white-400 text-sm">Total Coins</p> */}
               </div>
             </motion.div>
           </div>
@@ -290,59 +339,59 @@ export default function Page() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         >
           {/* Total Games */}
-          <div className="bg-black/20 backdrop-blur-xl rounded-2xl border border-blue-500/20 p-6 hover:border-blue-400/40 transition-all duration-300 hover:scale-105">
+          <div className="bg-black/30 backdrop-blur-xl rounded-2xl border border-gray-700/30 p-6 hover:border-gray-600/50 transition-all duration-300 hover:scale-105">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                <Gamepad2 className="text-white" size={24} />
+              <div className="w-12 h-12 bg-gradient-to-r from-gray-700 to-slate-800 rounded-xl flex items-center justify-center">
+                <Gamepad2 className="text-gray-300" size={24} />
               </div>
               <div>
-                <p className="text-3xl font-bold text-white">
-                  {playerState.total_games}
+                <p className="text-3xl font-bold text-gray-200">
+                  {playerState?.total_games}
                 </p>
-                <p className="text-gray-400 text-sm">Total Games</p>
+                <p className="text-gray-500 text-sm">Total Games</p>
               </div>
             </div>
           </div>
 
           {/* Wins */}
-          <div className="bg-black/20 backdrop-blur-xl rounded-2xl border border-green-500/20 p-6 hover:border-green-400/40 transition-all duration-300 hover:scale-105">
+          <div className="bg-black/30 backdrop-blur-xl rounded-2xl border border-gray-700/30 p-6 hover:border-gray-600/50 transition-all duration-300 hover:scale-105">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
-                <Trophy className="text-white" size={24} />
+              <div className="w-12 h-12 bg-gradient-to-r from-green-800 to-emerald-900 rounded-xl flex items-center justify-center">
+                <Trophy className="text-green-400" size={24} />
               </div>
               <div>
-                <p className="text-3xl font-bold text-white">
-                  {playerState.wins}
+                <p className="text-3xl font-bold text-gray-200">
+                  {playerState?.wins}
                 </p>
-                <p className="text-gray-400 text-sm">Victories</p>
+                <p className="text-gray-500 text-sm">Victories</p>
               </div>
             </div>
           </div>
 
           {/* Losses */}
-          <div className="bg-black/20 backdrop-blur-xl rounded-2xl border border-red-500/20 p-6 hover:border-red-400/40 transition-all duration-300 hover:scale-105">
+          <div className="bg-black/30 backdrop-blur-xl rounded-2xl border border-gray-700/30 p-6 hover:border-gray-600/50 transition-all duration-300 hover:scale-105">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-red-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <Target className="text-white" size={24} />
+              <div className="w-12 h-12 bg-gradient-to-r from-red-800 to-red-900 rounded-xl flex items-center justify-center">
+                <Target className="text-red-400" size={24} />
               </div>
               <div>
-                <p className="text-3xl font-bold text-white">
-                  {playerState.losses}
+                <p className="text-3xl font-bold text-gray-200">
+                  {playerState?.losses}
                 </p>
-                <p className="text-gray-400 text-sm">Defeats</p>
+                <p className="text-gray-500 text-sm">Defeats</p>
               </div>
             </div>
           </div>
 
           {/* Win Rate */}
-          <div className="bg-black/20 backdrop-blur-xl rounded-2xl border border-purple-500/20 p-6 hover:border-purple-400/40 transition-all duration-300 hover:scale-105">
+          <div className="bg-black/30 backdrop-blur-xl rounded-2xl border border-gray-700/30 p-6 hover:border-gray-600/50 transition-all duration-300 hover:scale-105">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <TrendingUp className="text-white" size={24} />
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-800 to-purple-900 rounded-xl flex items-center justify-center">
+                <TrendingUp className="text-purple-400" size={24} />
               </div>
               <div>
-                <p className="text-3xl font-bold text-white">{winRate}%</p>
-                <p className="text-gray-400 text-sm">Win Rate</p>
+                <p className="text-3xl font-bold text-gray-200">{winRate}%</p>
+                <p className="text-gray-500 text-sm">Win Rate</p>
               </div>
             </div>
           </div>
@@ -353,23 +402,23 @@ export default function Page() {
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.6 }}
-          className="bg-black/20 backdrop-blur-xl rounded-3xl border border-cyan-500/20 shadow-2xl overflow-hidden"
+          className="bg-black/30 backdrop-blur-xl rounded-3xl border border-gray-700/30 shadow-2xl overflow-hidden"
         >
           {/* Inventory Header */}
-          <div className="p-6 border-b border-cyan-500/20">
+          <div className="p-6 border-b border-gray-700/30">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
-                <h2 className="text-3xl font-bold text-white mb-2">
+                <h2 className="text-3xl font-bold text-gray-200 mb-2">
                   My Inventory
                 </h2>
-                <p className="text-gray-400">
+                <p className="text-gray-500">
                   Manage your collected items and achievements
                 </p>
               </div>
 
               <div className="flex items-center gap-4">
                 {/* Category Filter */}
-                <div className="flex items-center gap-2 bg-black/30 rounded-full p-1">
+                <div className="flex items-center gap-2 bg-black/40 rounded-full p-1">
                   {categories.map((category) => {
                     const Icon =
                       category === "All" ? Filter : getCategoryIcon(category);
@@ -381,8 +430,8 @@ export default function Page() {
                         onClick={() => setSelectedCategory(category)}
                         className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-all duration-300 ${
                           selectedCategory === category
-                            ? "bg-gradient-to-r from-cyan-500 to-purple-500 text-white"
-                            : "text-gray-300 hover:text-white hover:bg-white/10"
+                            ? "bg-gradient-to-r from-gray-700 to-slate-800 text-gray-200"
+                            : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                         }`}
                       >
                         <Icon size={16} />
@@ -393,13 +442,13 @@ export default function Page() {
                 </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center bg-black/30 rounded-full p-1">
+                <div className="flex items-center bg-black/40 rounded-full p-1">
                   <button
                     onClick={() => setViewMode("grid")}
                     className={`p-2 rounded-full transition-all duration-300 ${
                       viewMode === "grid"
-                        ? "bg-cyan-500 text-white"
-                        : "text-gray-400 hover:text-white"
+                        ? "bg-gray-700 text-gray-200"
+                        : "text-gray-500 hover:text-gray-200"
                     }`}
                   >
                     <Grid3X3 size={18} />
@@ -408,8 +457,8 @@ export default function Page() {
                     onClick={() => setViewMode("list")}
                     className={`p-2 rounded-full transition-all duration-300 ${
                       viewMode === "list"
-                        ? "bg-cyan-500 text-white"
-                        : "text-gray-400 hover:text-white"
+                        ? "bg-gray-700 text-gray-200"
+                        : "text-gray-500 hover:text-gray-200"
                     }`}
                   >
                     <List size={18} />
@@ -425,7 +474,7 @@ export default function Page() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-16 text-gray-400"
+                className="flex flex-col items-center justify-center py-16 text-gray-500"
               >
                 <Package size={64} className="mb-4 opacity-50" />
                 <h3 className="text-xl font-semibold mb-2">No Items Found</h3>
@@ -451,7 +500,7 @@ export default function Page() {
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.1 }}
                       whileHover={{ y: -5, scale: 1.02 }}
-                      className={`group relative bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-700/50 hover:border-cyan-400/50 transition-all duration-300 cursor-pointer ${getRarityGlow(
+                      className={`group relative bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-800/50 hover:border-gray-700/50 transition-all duration-300 cursor-pointer ${getRarityGlow(
                         item.store?.rarity
                       )} ${
                         viewMode === "list" ? "flex items-center p-4" : "p-4"
@@ -461,24 +510,34 @@ export default function Page() {
                       <div
                         className={`absolute inset-0 bg-gradient-to-r ${getRarityColor(
                           item.store?.rarity
-                        )} opacity-20 rounded-2xl`}
+                        )} opacity-10 rounded-2xl`}
                       />
 
                       {viewMode === "grid" ? (
                         <>
-                          {/* Item Image */}
+                          {/* Item Content */}
                           <div className="relative h-48 mb-4 rounded-xl overflow-hidden">
-                            <img
-                              src={item.store?.item_url}
-                              alt={item.store?.item}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                            />
+                            {item.store?.category === "Sounds" ? (
+                              <div className="w-full h-full bg-gray-800 flex flex-col items-center justify-center text-gray-400">
+                               <CustomAudioPlayer
+                               src  ={item.store?.item_url}
+                               itemName={item.store?.item}
+                               />
+                               
+                              </div>
+                            ) : (
+                              <img
+                                src={item.store?.item_url}
+                                alt={item.store?.item}
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              />
+                            )}
 
                             {/* Rarity Badge */}
                             <div
                               className={`absolute top-3 right-3 px-2 py-1 bg-gradient-to-r ${getRarityColor(
                                 item.store?.rarity
-                              )} rounded-full text-white text-xs font-bold capitalize`}
+                              )} rounded-full text-gray-200 text-xs font-bold capitalize`}
                             >
                               {item.store?.rarity}
                             </div>
@@ -486,21 +545,38 @@ export default function Page() {
 
                           {/* Item Info */}
                           <div className="relative z-10">
-                            <h3 className="text-white font-bold text-lg mb-2 group-hover:text-cyan-400 transition-colors duration-300">
+                            <h3 className="text-gray-200 font-bold text-lg mb-2 group-hover:text-gray-100 transition-colors duration-300">
                               {item.store?.item}
                             </h3>
 
                             <div className="flex items-center justify-between mb-3">
-                              <span className="text-gray-400 text-sm capitalize">
+                              <span className="text-gray-500 text-sm capitalize">
                                 {item.store?.category}
                               </span>
-                              <div className="flex items-center gap-1 text-yellow-400 font-bold">
-                                <PiCoins size={16} />
-                                <span>{item.store?.price}</span>
-                              </div>
+                              {item?.store?.category === "Avatars" && (
+                                
+                                  item?.store?.item_url === playerState?.avatar ? (
+                                    <motion.button
+                                    disabled='true'
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => equipAvatar(item)}
+                                      className="px-3 py-1 bg-slate-800 hover:bg-amber-700 text-amber-200 text-sm rounded-md transition-colors"
+                                    >
+                                      Equiped
+                                    </motion.button>
+                                  ):(
+                                  <motion.button
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={() => equipAvatar(item)}
+                                  className="px-3 py-1 bg-amber-800 hover:bg-amber-700 text-amber-200 text-sm rounded-md transition-colors"
+                                >
+                                  Equip
+                                </motion.button>
+                                  )
+                              )}
                             </div>
 
-                            <div className="text-gray-400 text-xs">
+                            <div className="text-gray-600 text-xs">
                               Purchased{" "}
                               {new Date(item.bought_at).toLocaleDateString()}
                             </div>
@@ -509,42 +585,48 @@ export default function Page() {
                       ) : (
                         <>
                           {/* List View */}
-                          <img
-                            src={item.store?.item_url}
-                            alt={item.store?.item}
-                            className="w-16 h-16 object-cover rounded-xl"
-                          />
+                          {item.store?.category === "Sounds" ? (
+                            <div className="w-16 h-16 bg-gray-800 rounded-xl flex items-center justify-center">
+                              <Volume2 size={24} className="text-gray-500" />
+                            </div>
+                          ) : (
+                            <img
+                              src={item.store?.item_url}
+                              alt={item.store?.item}
+                              className="w-16 h-16 object-cover rounded-xl"
+                            />
+                          )}
 
                           <div className="flex-1 ml-4">
                             <div className="flex items-center justify-between">
-                              <h3 className="text-white font-bold text-lg">
+                              <h3 className="text-gray-200 font-bold text-lg">
                                 {item.store?.item}
                               </h3>
                               <div className="flex items-center gap-2">
                                 <div
                                   className={`px-2 py-1 bg-gradient-to-r ${getRarityColor(
                                     item.store?.rarity
-                                  )} rounded-full text-white text-xs font-bold capitalize`}
+                                  )} rounded-full text-gray-200 text-xs font-bold capitalize`}
                                 >
                                   {item.store?.rarity}
                                 </div>
                                 <ArrowRight
-                                  className="text-gray-400 group-hover:text-cyan-400 transition-colors"
+                                  className="text-gray-500 group-hover:text-gray-300 transition-colors"
                                   size={20}
                                 />
                               </div>
                             </div>
 
                             <div className="flex items-center justify-between mt-2">
-                              <span className="text-gray-400 text-sm capitalize">
+                              <span className="text-gray-500 text-sm capitalize">
                                 {item.store?.category}
                               </span>
                               <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-1 text-yellow-400 font-bold">
+                                <div className="flex items-center gap-1 text-amber-500 font-bold">
                                   <PiCoins size={16} />
                                   <span>{item.store?.price}</span>
                                 </div>
-                                <span className="text-gray-400 text-xs">
+                                <span className="text-gray-600 text-xs">
                                   {new Date(
                                     item.bought_at
                                   ).toLocaleDateString()}
@@ -560,7 +642,7 @@ export default function Page() {
                         <div
                           className={`absolute inset-0 bg-gradient-to-r ${getRarityColor(
                             item.store?.rarity
-                          )} opacity-10 rounded-2xl`}
+                          )} opacity-5 rounded-2xl`}
                         />
                       </div>
                     </motion.div>

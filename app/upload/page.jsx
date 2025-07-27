@@ -5,18 +5,21 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { v4 as uuidv4 } from "uuid";
 
-
-
 export default function UploadStoreItem() {
   const [itemName, setItemName] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
+  const [rarity, setRarity] = useState('');
   const [source, setSource] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!itemName || !price || !category || !imageFile) {
+    // 👇 ضع قيم افتراضية لو ما تم اختيارهم
+    const finalCategory = category || 'Avatars';
+    const finalRarity = rarity || 'common';
+
+    if (!itemName || !price || !imageFile) {
       alert("Please fill all fields and select an image");
       return;
     }
@@ -26,7 +29,6 @@ export default function UploadStoreItem() {
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `${fileName}`;
 
-    // ✅ رفع الصورة إلى supabase storage
     const { error: uploadError } = await supabase.storage
       .from("store")
       .upload(filePath, imageFile);
@@ -38,19 +40,21 @@ export default function UploadStoreItem() {
       return;
     }
 
-    const publicURL = supabase.storage
+    const publicURL = supabase
+      .storage
       .from("store")
       .getPublicUrl(filePath).data.publicUrl;
 
-    // ✅ إدخال البيانات إلى قاعدة البيانات
     const { error: insertError } = await supabase
       .from("store")
       .insert([{
-        id:uuidv4(),
+        id: uuidv4(),
         item: itemName,
         price: parseInt(price),
-        category,
+        category: finalCategory,
+        rarity: finalRarity,
         item_url: publicURL,
+        rarity: rarity || 'common',
       }]);
 
     if (insertError) {
@@ -58,9 +62,11 @@ export default function UploadStoreItem() {
       console.error(insertError);
     } else {
       alert("Item added successfully!");
+      // ✅ إعادة تعيين الحقول
       setItemName('');
       setPrice('');
       setCategory('');
+      setRarity('');
       setSource('');
       setImageFile(null);
     }
@@ -70,36 +76,48 @@ export default function UploadStoreItem() {
 
   return (
     <div className="w-full h-full mx-auto p-6 rounded-md text-white bg-slate-900 shadow-md space-y-4">
-      <div className="flex items-center space-x-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-white" htmlFor="itemName">Item Name</label>
+      <div>
+        <label className="text-sm font-medium">Item Name</label>
+        <input value={itemName} onChange={e => setItemName(e.target.value)} className="w-full px-4 py-2 border rounded-md mt-1" />
       </div>
-      <input value={itemName} onChange={e => setItemName(e.target.value)} className="w-full px-4 py-2 border rounded-md" id="itemName" />
 
-      <div className="flex items-center space-x-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-white" htmlFor="price">Price</label>
+      <div>
+        <label className="text-sm font-medium">Price</label>
+        <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full px-4 py-2 border rounded-md mt-1" />
       </div>
-      <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="w-full px-4 py-2 border rounded-md" id="price" />
 
-      <div className="flex items-center space-x-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-white" htmlFor="category">Category</label>
+      <div>
+        <label className="text-sm font-medium">Category</label>
+        <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-2 border rounded-md mt-1">
+          <option value="">-- Select Category --</option>
+          <option value="Avatars">Avatars</option>
+          <option value="Sounds">Sounds</option>
+          <option value="Powers">Powers</option>
+        </select>
       </div>
-      <select value={category} onChange={e => setCategory(e.target.value)} className="w-full px-4 py-2 border rounded-md" id="category">
-        <option value="Avatars">Avatars</option>
-        <option value="Sounds">Sounds</option>
-        <option value="Powers">Powers</option>
-      </select>
 
-      <div className="flex items-center space-x-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-white" htmlFor="source">Source</label>
+      <div>
+        <label className="text-sm font-medium">Rarity</label>
+        <select value={rarity} onChange={e => setRarity(e.target.value)} className="w-full px-4 py-2 border rounded-md mt-1">
+          <option value="">-- Select Rarity --</option>
+          <option value="common">Common</option>
+          <option value="rare">Rare</option>
+          <option value="epic">Epic</option>
+          <option value="legendary">Legendary</option>
+        </select>
       </div>
-      <input value={source} onChange={e => setSource(e.target.value)} className="w-full px-4 py-2 border rounded-md" id="source" />
 
-      <div className="flex items-center space-x-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-white" htmlFor="image">Upload Image</label>
+      <div>
+        <label className="text-sm font-medium">Source</label>
+        <input value={source} onChange={e => setSource(e.target.value)} className="w-full px-4 py-2 border rounded-md mt-1" />
       </div>
-      <input type="file"  onChange={e => setImageFile(e.target.files[0])} className="w-full px-4 py-2 border rounded-md" id="image" />
 
-      <Button onClick={handleSubmit} disabled={loading} className="w-full">
+      <div>
+        <label className="text-sm font-medium">Upload Image</label>
+        <input type="file" onChange={e => setImageFile(e.target.files[0])} className="w-full px-4 py-2 border rounded-md mt-1" />
+      </div>
+
+      <Button onClick={handleSubmit} disabled={loading} className="w-full mt-4">
         {loading ? "Uploading..." : "Upload Item"}
       </Button>
     </div>

@@ -6,8 +6,8 @@ export default function GameBox({ roomData, players, currentPlayerId }) {
   const [role_preview, setRole_preview] = useState(false);
   const [positions, setPositions] = useState({});
 
-  const dayBackground = 'http://localhost:3000/assets/images/day.png';
-  const nightBackground = 'http://localhost:3000/assets/images/night.png';
+  const dayBackground = '/assets/images/day.png';
+  const nightBackground = '/assets/images/night.png';
 
   // Initialize or update player positions
   useEffect(() => {

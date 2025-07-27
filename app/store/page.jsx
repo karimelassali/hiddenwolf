@@ -17,6 +17,7 @@ import { MdLockOutline } from "react-icons/md";
 
 import { useUser } from "@clerk/nextjs";
 import { CustomAudioPlayer } from "@/components/audioPlayer";
+import { CashSound } from "@/utils/sounds";
 
 // Custom Audio Player Component
 
@@ -34,7 +35,10 @@ export default function Page() {
 
   useEffect(() => {
     const fetchItems = async () => {
-      const { data, error } = await supabase.from("store").select("*");
+      const { data, error } = await supabase
+        .from("store")
+        .select("*")
+        .order("id", { ascending: true });
       if (error) console.error(error);
       else {
         setItems(data);
@@ -58,10 +62,6 @@ export default function Page() {
     setItems(filteredItems);
   }, [chosedCategory, allItems, searchTerm]);
 
-  const addToCart = (item) => {
-    setCart((prev) => [...prev, item]);
-    // Add a subtle shake animation or success feedback
-  };
 
   const categoryIcons = {
     Avatars: Gamepad2,
@@ -74,7 +74,7 @@ export default function Page() {
   const fetchUserState = async (playerId) => {
     const { data, error } = await supabase
       .from("player_stats")
-      .select("coins")
+      .select("coins,avatar")
       .eq("player_id", playerId)
       .single();
     if (error) {
@@ -95,6 +95,7 @@ export default function Page() {
     });
 
     setPlayerState({ coins: playerState.coins - chosedItem.price });
+    CashSound();
     setChosedItem(null);
   };
   useEffect(() => {
@@ -130,9 +131,22 @@ export default function Page() {
       >
         <div className="flex items-center gap-4 bg-black/20 backdrop-blur-sm rounded-full px-6 py-3 border border-cyan-500/30">
           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-cyan-500 to-purple-500 flex items-center justify-center">
-            {/* <User className="text-white" size={20} /> */}
+            {
+              playerState.avatar ? (
+                <Image
+                  src={playerState.avatar}
+                  alt="Avatar"
+                  width={100}
+                  height={100}
+                  className="rounded-full"
+                />
+              ) : (
+                user?.firstName?.charAt(0) || "P"
+              )
+            }
           </div>
           <div className="text-white">
+
             <div className="font-semibold">{user?.firstName || "Player"}</div>
             {/* <div className="text-sm text-gray-300">
               {user?.emailAddresses?.[0]?.emailAddress}
@@ -144,7 +158,7 @@ export default function Page() {
           <PiCoins className="text-yellow-400 text-2xl" />
           <div className="text-white">
             <div className="font-bold text-xl text-yellow-400">
-              {playerState.coins.toLocaleString("en-US", {
+              {playerState?.coins?.toLocaleString("en-US", {
                 currency: "EUR",
               })}
             </div>

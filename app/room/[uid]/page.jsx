@@ -80,6 +80,19 @@ export default function Room({ params }) {
 
       if (findError) throw findError;
 
+      const { data: playerStat, error: playerStatError } = await supabase
+        .from("player_stats")
+        .select("avatar")
+        .eq("player_id", user?.id)
+        .single();
+
+      if (playerStatError) {
+        console.error("Error fetching player avatar:", playerStatError);
+        return;
+      }
+
+      const playerAvatar = playerStat?.avatar || user?.imageUrl;
+      console.log(playerAvatar)
       const playerData = {
         room_id: roomId,
         name: user.fullName,
@@ -89,7 +102,7 @@ export default function Room({ params }) {
         player_id: user.id,
         last_seen: new Date().toISOString(),
         is_human: true,
-        profile: user.imageUrl,
+        profile: playerAvatar,
       };
 
       if (existingPlayer) {
@@ -214,7 +227,7 @@ export default function Room({ params }) {
       // router.push(`/game/${roomData.code}`);
       setHasRoomBeenPlayed(true);
     }
-  }, [roomData.stage]);
+  }, [roomData?.stage]);
 
   return hasRoomBeenPlayed ? (
     <div className="h-screen flex items-center justify-center">
@@ -233,7 +246,7 @@ export default function Room({ params }) {
       }}
       className="min-h-screen  scrollbar-hide flex flex-col"
     >
-      <Players fetched_players={players} room_host_id={roomData.host_id} />
+      <Players fetched_players={players} room_host_id={roomData?.host_id} />
 
       <div className="fixed  gap-y-5 flex flex-col w-full backdrop-blur-lg bg-slate-900/20 bottom-0 justify-between items-center border-t border-slate-700/50 p-6 shadow-2xl">
         <div className="flex  w-full items-center justify-between space-x-4">
@@ -291,7 +304,7 @@ export default function Room({ params }) {
                     Players in this room
                   </p>
                   <p className="text-slate-400 text-sm">
-                    Stage: {roomData.stage}
+                    Stage: {roomData?.stage}
                   </p>
                 </div>
               </div>
@@ -310,7 +323,7 @@ export default function Room({ params }) {
                         console.log(error);
                       }
                     } else {
-                      addBotsIfNeede(roomId, 4 - players.length);
+                      addBotsIfNeede(roomId, 15- players.length);
                       const { data, error } = await supabase
                         .from("rooms")
                         .update({ stage: "night" })
@@ -327,7 +340,7 @@ export default function Room({ params }) {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 <span className="relative flex items-center space-x-2">
-                  {roomData.stage === "play" ? (
+                  {roomData?.stage === "play" ? (
                     <>
                       <svg
                         className="w-5 h-5"

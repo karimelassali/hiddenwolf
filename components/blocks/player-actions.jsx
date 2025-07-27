@@ -394,9 +394,9 @@ export default function PlayerActions({
                         <div className="relative mb-4">
                           <div className="w-16 h-16 mx-auto bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full p-0.5 shadow-lg">
                             <div className="w-full h-full bg-gray-800 rounded-full flex items-center justify-center">
-                              {player.img ? (
+                              {player.profile ? (
                                 <img 
-                                  src={player.img} 
+                                  src={player.profile} 
                                   alt={player.name}
                                   className="w-full h-full object-cover rounded-full"
                                 />

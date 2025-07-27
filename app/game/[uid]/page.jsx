@@ -91,6 +91,7 @@ export default function Game({ params }) {
         },
         (payload) => {
           setRoomData(payload.new);
+          fetchRoomData();
         }
       )
       .subscribe();
@@ -261,8 +262,7 @@ export default function Game({ params }) {
         alivePlayers.length > 1 &&
         !alivePlayers.some((p) => p.role === "wolf")
       ) {
-        console.log("villagers win");
-        setWinner(winner);
+          setWinner(winner);
       }
     };
 
@@ -459,6 +459,7 @@ export default function Game({ params }) {
 
                 <h3 className="text-2xl font-bold text-slate-200 mb-2">
                   Ready to Assign Roles?
+                  {roomData.roles_assigned ? "Roles are assigned" : 'Not yet'}
                 </h3>
                 <p className="text-slate-400">
                   Distribute roles to all players to begin the game
