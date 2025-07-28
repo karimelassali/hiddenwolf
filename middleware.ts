@@ -1,9 +1,16 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-const isProtectedRoute = createRouteMatcher(['/(.*)', '/room(.*)', '/game(.*)'])
+// 🔽 قم بإدراج المسارات التي تريد حمايتها فقط
+const isProtectedRoute = createRouteMatcher([
+  '/', // 👈 أضف هذا السطر لحماية الصفحة الرئيسية
+  '/room(.*)',
+  '/game(.*)',
+  '/pricing(.*)',
+  '/profile(.*)'
+])
 
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) await auth.protect()
+export default clerkMiddleware((auth, req) => {
+  if (isProtectedRoute(req)) auth.protect()
 })
 
 export const config = {

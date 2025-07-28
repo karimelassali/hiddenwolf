@@ -53,7 +53,7 @@ export default function Home() {
           const giftCoins = Math.floor(Math.random() * coins.length);
           const { data, error } = await supabase
             .from("player_stats")
-            .insert({ player_id: user.id, coins: coins[giftCoins] });
+            .insert({ player_id: user.id, coins: coins[giftCoins],email: user.emailAddresses[0].emailAddress });
           setRevealCoins(coins[giftCoins]);
           if (error) {
             console.error("Error fetching player data:", error);
@@ -178,7 +178,7 @@ export default function Home() {
         }
       })();
     }
-  }, [fetchUser, user.id]);
+  }, [fetchUser, user?.id]);
 
   return (
     <div
