@@ -6,6 +6,8 @@ function getCoinsFromVariant(variantId) {
   const coinMap = {
     '100d1049-12e3-4a97-b5f1-1c6ab68e676c': 100,
     '922408': 100,
+    '922785':500,
+    '922797':1000,
   }
   return coinMap[String(variantId)] || 0
 }
