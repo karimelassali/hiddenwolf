@@ -409,46 +409,103 @@ export default function Home() {
       </div>
 
       {/* Bottom navigation */}
-      <div className="fixed bottom-0 left-0 w-full z-10 bg-gradient-to-r from-slate-900/40 via-gray-900/30 to-black/40 backdrop-blur-xl border-t border-gray-600/20 p-4">
-        <div className="flex items-center justify-center gap-4 max-w-lg mx-auto">
-          <Button
-            variant={"dark"}
-            onClick={() => router.push("/rules")}
-            className="flex-1 bg-slate-800/20 hover:bg-slate-700/30 text-gray-200 font-medium py-4 px-4 rounded-xl border border-gray-600/20 transition-all duration-300 hover:border-gray-500/40 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/10"
-          >
-            <span className="flex flex-col items-center gap-1">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span className="text-sm">Rules</span>
-            </span>
-          </Button>
-
-          <Button
-            variant={"dark"}
-            onClick={() => router.push("/profile")}
-            className="flex-1 bg-slate-800/20 hover:bg-slate-700/30 text-gray-200 font-medium py-4 px-4 rounded-xl border border-gray-600/20 transition-all duration-300 hover:border-gray-500/40 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/10"
-          >
-            <span className="flex flex-col items-center gap-1">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span className="text-sm">Profile</span>
-            </span>
-          </Button>
-
-          <Button
-            variant={"dark"}
-            onClick={() => router.push("/store")}
-            className="flex-1 bg-slate-800/20 hover:bg-slate-700/30 text-gray-200 font-medium py-4 px-4 rounded-xl border border-gray-600/20 transition-all duration-300 hover:border-gray-500/40 backdrop-blur-sm hover:shadow-lg hover:shadow-gray-500/10"
-          >
-            <span className="flex flex-col items-center gap-1">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m-2.4 0L3 3H1m6 16a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z" />
-              </svg>
-              <span className="text-sm">Store</span>
-            </span>
-          </Button>
+   {/* Enhanced Bottom navigation with mysterious premium feel */}
+   <div className="fixed bottom-0 left-0 w-full z-10">
+        {/* Gradient backdrop with enhanced blur */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-slate-900/80 to-transparent backdrop-blur-2xl" />
+        
+        {/* Top border glow effect */}
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-500/60 to-transparent" />
+        
+        <div className="relative p-6 pb-8">
+          <div className="flex items-center justify-center gap-3 max-w-2xl mx-auto">
+            {[
+              { 
+                label: "Rules", 
+                route: "/rules", 
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                ),
+                activeColor: "from-blue-600/20 to-blue-800/20",
+                hoverShadow: "hover:shadow-blue-500/10"
+              },
+              { 
+                label: "Profile", 
+                route: "/profile", 
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                ),
+                activeColor: "from-purple-600/20 to-purple-800/20",
+                hoverShadow: "hover:shadow-purple-500/10"
+              },
+              { 
+                label: "Store", 
+                route: "/store", 
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m-2.4 0L3 3H1m6 16a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z" />
+                  </svg>
+                ),
+                activeColor: "from-green-600/20 to-green-800/20",
+                hoverShadow: "hover:shadow-green-500/10"
+              },
+              { 
+                label: "Ranking", 
+                route: "/ranking", 
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                ),
+                activeColor: "from-yellow-600/20 to-yellow-800/20",
+                hoverShadow: "hover:shadow-yellow-500/10"
+              },
+              { 
+                label: "Shopping", 
+                route: "/pricing", 
+                icon: (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                ),
+                activeColor: "from-red-600/20 to-red-800/20",
+                hoverShadow: "hover:shadow-red-500/10"
+              }
+            ].map((item, index) => (
+              <Button
+                key={index}
+                variant={"dark"}
+                onClick={() => router.push(item.route)}
+                className={`group relative overflow-hidden flex-1 min-w-[70px] bg-gradient-to-b from-slate-800/30 to-slate-900/50 hover:from-slate-700/40 hover:to-slate-800/60 text-slate-300 hover:text-white font-medium p-3 rounded-2xl border border-slate-600/30 hover:border-slate-500/50 transition-all duration-500 hover:scale-110 hover:-translate-y-2 backdrop-blur-xl shadow-lg ${item.hoverShadow}`}
+              >
+                {/* Hover background gradient */}
+                <div className={`absolute inset-0 bg-gradient-to-b ${item.activeColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl`} />
+                
+                {/* Subtle inner glow */}
+                <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
+                
+                {/* Content with proper spacing */}
+                <span className="relative flex flex-col items-center justify-center gap-3 z-10 h-full min-h-[60px]">
+                  <div className="group-hover:scale-125 transition-transform duration-300 flex items-center justify-center">
+                    {item.icon}
+                  </div>
+                  <span className="text-xs font-semibold tracking-wide group-hover:text-white transition-colors duration-300 text-center leading-tight">
+                    {item.label}
+                  </span>
+                </span>
+                
+                {/* Bottom indicator line */}
+                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-slate-500 group-hover:w-8 transition-all duration-500 rounded-full" />
+              </Button>
+            ))}
+          </div>
+          
+          {/* Bottom safe area for mobile devices */}
+          <div className="h-2" />
         </div>
       </div>
     </div>

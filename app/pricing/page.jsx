@@ -15,7 +15,9 @@ export default function Pricing() {
 
   // Coin packages with variant IDs from Lemon Squeezy dashboard
   const coinPackages = [
-    { name: '100 Coins', variantId: '100d1049-12e3-4a97-b5f1-1c6ab68e676c', price: 9.99 },
+    { name: '100 Coins', variantId: '100d1049-12e3-4a97-b5f1-1c6ab68e676c', price: 0.99 },
+    { name: '500 Coins', variantId: '6cf96237-339d-42dd-80be-69416a3b254b',price: 4.99},
+    { name: '1000 Coins', variantId: 'a0133bd3-7b36-4c31-90a5-6b17c890c748',price: 9.99},
     // Add more packages if available, e.g.:
     // { name: '500 Coins', variantId: 'your_variant_id_500', price: 39.99 },
     // { name: '1000 Coins', variantId: 'your_variant_id_1000', price: 69.99 },
