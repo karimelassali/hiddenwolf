@@ -1,7 +1,3 @@
-'use client'
-import { Geist, Geist_Mono } from "next/font/google";
-import { NetworkTracking } from "@/components/networkTracking";
-import { Navbar } from "@/components/navbar";
 
 import "./globals.css";
 import {
@@ -12,8 +8,17 @@ import {
   SignedOut,
   UserButton,
 } from "@clerk/nextjs";
+import dynamic from "next/dynamic";
+
+const Navbar = dynamic(() => import("@/components/navbar"));
 
 
+
+export const metadata = {
+  title: "Wolf Game",
+  description:
+    "A social deduction game where players try to figure out who is a wolf and who is a villager.",
+};
 
 /**
  * The root layout component.

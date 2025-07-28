@@ -82,7 +82,7 @@ export default function Room({ params }) {
 
       const { data: playerStat, error: playerStatError } = await supabase
         .from("player_stats")
-        .select("avatar")
+        .select("avatar,username")
         .eq("player_id", user?.id)
         .single();
 
@@ -92,10 +92,11 @@ export default function Room({ params }) {
       }
 
       const playerAvatar = playerStat?.avatar || user?.imageUrl;
+      const playerUsername = playerStat?.username || user?.fullName;
       console.log(playerAvatar)
       const playerData = {
         room_id: roomId,
-        name: user.fullName,
+        name: playerUsername,
         role: null,
         is_alive: true,
         vote_to: null,
@@ -315,7 +316,6 @@ export default function Room({ params }) {
               </div>
 
               <button
-                disabled={gameStartClicked}
                 onClick={async () => {
                   try {
                     setgameStartClicked(true);

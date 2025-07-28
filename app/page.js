@@ -22,10 +22,12 @@ export default function Home() {
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
   const [avatar, setAvatar] = useState(null);
   const [totalGames, setTotalGames] = useState(0);
+  const [username,setUsername] = useState("");
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [roomCode, setRoomCode] = useState("");
   const [joinRoomLoading, setJoinRoomLoading] = useState(false);
   const [joinRoomError, setJoinRoomError] = useState("");
+
 
   const backgrounds = [
     'url("/assets/images/background.png")',
@@ -164,7 +166,7 @@ export default function Home() {
       (async () => {
         const { data, error } = await supabase
           .from("player_stats")
-          .select("avatar,total_games")
+          .select("avatar,total_games,username")
           .eq("player_id", user.id)
           .single();
         if (error) {
@@ -172,6 +174,7 @@ export default function Home() {
         } else {
           setAvatar(data.avatar);
           setTotalGames(data.total_games);
+          setUsername(data.username);
         }
       })();
     }
@@ -341,7 +344,7 @@ export default function Home() {
           {/* User Info */}
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-200 mb-2">
-              Welcome, {user?.firstName || "Player"}
+              Welcome, {username || user?.firstName || "Player"}
             </h2>
             <p className="text-gray-400/70 text-sm mb-3">
               {user?.emailAddresses?.[0]?.emailAddress}
