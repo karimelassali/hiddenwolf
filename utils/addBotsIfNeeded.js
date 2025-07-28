@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase"
 import { v4 as uuidv4 } from 'uuid';
 import {faker} from '@faker-js/faker';
 
-export async function addBotsIfNeede(roomID,botCount){
+export async function addBotsIfNeeded(roomID,botCount){
     const baseRoles = ['wolf', 'seer', 'doctor'];
     const bots = [];
     for (let i = 0; i < botCount; i++) {

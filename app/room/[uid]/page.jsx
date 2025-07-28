@@ -1,386 +1,290 @@
+// "use client" - This directive indicates that the component will run on the client-side (in the browser), not on the server.
 "use client";
-import { useUser } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import React from "react";
+
+// --- Import Core Libraries from React & Next.js ---
+import React, { useEffect, useState } from "react";
+import { useUser } from "@clerk/nextjs"; // Hook to get data for the currently logged-in user via Clerk.
+import { useRouter } from "next/navigation"; // Hook to control client-side navigation.
+
+// --- Import Supabase Client ---
+import { supabase } from "@/lib/supabase"; // Supabase client for database interaction.
+
+// --- Import UI Components ---
 import { Players } from "@/components/Players";
-import { useRouter } from "next/navigation";
 import { Countdown } from "@/components/ui/countdown";
-import { addBotsIfNeede } from "@/utils/addBotsIfNeeded";
+import { Loader } from "@/components/ui/loader"; 
+
+// --- Import Utility Functions ---
+import { addBotsIfNeeded } from "@/utils/addBotsIfNeeded";
 import { trackUserConnectivity } from "@/utils/trackUserconnectivity";
 import { updatePlayerState } from "@/utils/updatePlayerState";
-
 import { quotes } from "@/utils/quotes";
 import { JoinSound } from "@/utils/sounds";
-import { Loader } from "@/components/ui/loader";
 
+// --- Component Definition ---
+// This is the main component for the Room page, receiving `params` from the URL.
 export default function Room({ params }) {
-  const resolvedParams = React.use(params);
-
-  const { uid } = resolvedParams;
+  // Destructure the room `uid` from the URL parameters.
+  const { uid } = params;
+  // Initialize the router for programmatic navigation.
   const router = useRouter();
-  const [roomId, setRoomId] = useState("");
-  const [roomData, setRoomData] = useState({});
-  const [user, setUser] = useState([]);
-  const fetchUser = useUser();
+  // Get the current user's data and loading status from Clerk.
+  const { user, isLoaded } = useUser();
+
+  // --- State Variables ---
+  // `roomData`: Stores the data of the current room (e.g., stage, host ID).
+  const [roomData, setRoomData] = useState(null);
+  // `players`: Stores the list of players currently in the room.
   const [players, setPlayers] = useState([]);
+  // `isLoading`: Manages the loading state for the initial data fetch.
+  const [isLoading, setIsLoading] = useState(true);
+  // `hasRoomBeenPlayed`: Tracks if the game has started, used to show the countdown.
   const [hasRoomBeenPlayed, setHasRoomBeenPlayed] = useState(false);
+  // `quote`: Stores a random quote to display at the bottom.
   const [quote, setQuote] = useState("");
-  const [gameStartClicked, setgameStartClicked] = useState(false);
 
-  useEffect(() => {
-    if (fetchUser.isLoaded) {
-      setUser(fetchUser.user);
-    }
-  }, [fetchUser]);
-
-  const fetchPlayers = async () => {
-    if (roomId) {
-      try {
-        const { data: players, error } = await supabase
-          .from("players")
-          .select("*")
-          .eq("room_id", roomId)
-          .order("id", { ascending: true });
-        if (error) {
-          console.log(error);
-        }
-        setPlayers(players);
-      } catch (error) {
-        console.log(error);
-      }
-    }
-  };
-
-  const fetchRoomData = async () => {
-    const { data: roomData, error } = await supabase
-      .from("rooms")
-      .select("*")
-      .eq("code", uid)
-      .single();
-    if (error) {
-      console.log(error);
-    }
-    setRoomId(roomData?.id);
-    setRoomData(roomData);
-  };
-
-  const addPlayer = async () => {
-    if (!user.fullName || !roomId) return;
+  // --- Helper Functions ---
+  // This function adds a new player or updates an existing one in the database.
+  const upsertPlayer = async (roomId, currentUser) => {
+    // Exit if essential data is missing.
+    if (!currentUser || !roomId) return;
 
     try {
-      await fetchRoomData();
-
-      // First, check if player exists in any room
-      const { data: existingPlayer, error: findError } = await supabase
-        .from("players")
-        .select("id, room_id")
-        .eq("player_id", user.id)
-        .maybeSingle();
-
-      if (findError) throw findError;
-
-      const { data: playerStat, error: playerStatError } = await supabase
+      // Fetch additional player stats (like a custom avatar or username) from another table.
+      const { data: playerStat } = await supabase
         .from("player_stats")
         .select("avatar,username")
-        .eq("player_id", user?.id)
+        .eq("player_id", currentUser.id)
         .single();
 
-      if (playerStatError) {
-        console.error("Error fetching player avatar:", playerStatError);
-        return;
-      }
-
-      const playerAvatar = playerStat?.avatar || user?.imageUrl;
-      const playerUsername = playerStat?.username || user?.fullName;
-      console.log(playerAvatar)
+      // Prepare the player data object for the database operation.
       const playerData = {
         room_id: roomId,
-        name: playerUsername,
-        role: null,
-        is_alive: true,
-        vote_to: null,
-        player_id: user.id,
-        last_seen: new Date().toISOString(),
+        name: playerStat?.username || currentUser.fullName, // Use custom name if it exists.
+        profile: playerStat?.avatar || currentUser.imageUrl, // Use custom avatar if it exists.
+        player_id: currentUser.id,
         is_human: true,
-        profile: playerAvatar,
+        last_seen: new Date().toISOString(), // Record the player's last active time.
       };
-
-      if (existingPlayer) {
-        // If player exists in a different room, delete the old record
-        if (existingPlayer.room_id !== roomId) {
-          const { error: deleteError } = await supabase
-            .from("players")
-            .delete()
-            .eq("id", existingPlayer.id);
-
-          if (deleteError) throw deleteError;
-          console.log("🗑️ Removed player from previous room");
-
-          // Insert new record in the new room
-          const { error: insertError } = await supabase
-            .from("players")
-            .insert(playerData);
-
-          if (insertError) throw insertError;
-          console.log("✅ Player moved to new room");
-        } else {
-          // Update existing player in the same room
-          const { error: updateError } = await supabase
-            .from("players")
-            .update(playerData)
-            .eq("id", existingPlayer.id);
-
-          if (updateError) throw updateError;
-          console.log("🔄 Player updated in room");
-        }
-      } else {
-        // Insert new player
-        const { error: insertError } = await supabase
-          .from("players")
-          .insert(playerData);
-
-        if (insertError) throw insertError;
-        console.log("✅ New player added to room");
-      }
-      fetchPlayers();
+      
+      // `upsert` will INSERT a new record if it doesn't exist, or UPDATE it if it does.
+      // `onConflict` specifies the unique column to check for existing records.
+      await supabase.from("players").upsert(playerData, {
+        onConflict: 'player_id',
+      });
+      
     } catch (error) {
-      console.error("Error in addPlayer:", error);
+      // Log any errors that occur during the process.
+      console.error("Error in upsertPlayer:", error);
     }
   };
-
-  const updatePlayerTotaleGames = async () => {
-    const data = {
-      newGame: true,
-    };
-
-    //Add A new game for the player.
-    updatePlayerState(user.id, data);
-  };
+  
+  // --- useEffect Hooks ---
+  // This hook handles the initial setup of the room. It runs once when the component mounts.
   useEffect(() => {
-    const initialize = async () => {
-      if (user.fullName) {
-        await fetchRoomData();
-        await addPlayer();
+    // Don't run until the user's data has been loaded from Clerk.
+    if (!isLoaded) return;
+
+    const initializeRoom = async () => {
+      // Show the loading indicator.
+      setIsLoading(true);
+      try {
+        // 1. Fetch the room's data from the database using the UID from the URL.
+        const { data: room, error: roomError } = await supabase
+          .from("rooms")
+          .select("*")
+          .eq("code", uid)
+          .single();
+
+        // If the room is not found, throw an error to be caught below.
+        if (roomError || !room) throw new Error("Room not found or failed to fetch.");
+        // Store the fetched room data in the state.
+        setRoomData(room);
+
+        // 2. Fetch the list of players currently in this room.
+        const { data: initialPlayers, error: playersError } = await supabase
+          .from("players")
+          .select("*")
+          .eq("room_id", room.id)
+          .order("id", { ascending: true });
+
+        if (playersError) throw playersError;
+        // Store the initial list of players in the state.
+        setPlayers(initialPlayers);
+
+        // 3. Add or update the current user in the room.
+        if (user) {
+          await upsertPlayer(room.id, user);
+        }
+
+      } catch (error) {
+        // If any error occurs during initialization, log it and redirect the user to the home page.
+        console.error("Initialization Error:", error);
+        router.push("/");
+      } finally {
+        // Hide the loading indicator after the process is complete (whether it succeeded or failed).
+        setIsLoading(false);
       }
     };
-    initialize();
-  }, [user.fullName, roomId]);
 
+    // Call the initialization function.
+    initializeRoom();
+  }, [isLoaded, user, uid]); // Dependency Array: This effect will only re-run if these values change.
+
+  // This hook sets up the real-time subscriptions with Supabase.
   useEffect(() => {
-   
-    const subscription = supabase
-      .channel("players_channel")
+    // Don't set up subscriptions until we have a valid room ID.
+    if (!roomData?.id) return;
+
+    // Set up a channel to listen for changes to the 'players' table for this specific room.
+    const playersChannel = supabase
+      .channel(`public:players:room_id=eq.${roomData.id}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "players",
-          filter: `room_id=eq.${roomId}`,
-        },
+        { event: "*", schema: "public", table: "players" },
         (payload) => {
-
+          // Handle a new player joining.
           if (payload.eventType === "INSERT") {
-            fetchPlayers();
-
-            JoinSound();
+            JoinSound(); // Play a sound effect.
+            // Use the functional update form to avoid "stale closure" issues.
+            // This ensures we are always updating the most recent state.
+            setPlayers(prevPlayers => [...prevPlayers, payload.new]);
+          }
+          // Handle updates to an existing player's data.
+          if (payload.eventType === "UPDATE") {
+            setPlayers(prevPlayers =>
+              prevPlayers.map(p => (p.id === payload.new.id ? payload.new : p))
+            );
+          }
+          // Handle a player leaving (record deleted).
+          if (payload.eventType === "DELETE") {
+            setPlayers(prevPlayers =>
+              prevPlayers.filter(p => p.id !== payload.old.id)
+            );
           }
         }
       )
-      .subscribe();
+      .subscribe(); // Start listening for changes.
 
-    const roomsSubscription = supabase
-      .channel("rooms_channel")
+    // Set up a channel to listen for changes to the room's data itself (e.g., stage change).
+    const roomChannel = supabase
+      .channel(`public:rooms:id=eq.${roomData.id}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "rooms",
-          filter: `id=eq.${roomId}`,
-        },
+        { event: "UPDATE", schema: "public", table: "rooms" },
         (payload) => {
-          console.log("🚨 Rooms payload", payload);
-          setRoomData(payload.new);
-          const newStage = payload.new?.stage;
-          if(newStage === 'night'){
-            updatePlayerTotaleGames();
-            setHasRoomBeenPlayed(true);
-          }
+          // Update the room data in the state when a change is received.
+          setRoomData(prevData => ({ ...prevData, ...payload.new }));
         }
       )
-      .subscribe();
+      .subscribe(); // Start listening for changes.
+
+    // Cleanup function: This is called when the component unmounts.
     return () => {
-      supabase.removeChannel(roomsSubscription);
-      supabase.removeChannel(subscription);
+      // Unsubscribe from the channels to prevent memory leaks.
+      supabase.removeChannel(playersChannel);
+      supabase.removeChannel(roomChannel);
     };
-  }, [roomId]);
+  }, [roomData?.id]); // Dependency Array: This effect only depends on the room's ID.
 
-  //Interval for keep tracking on user if he is online or offline
+  // This hook tracks user connectivity (online/offline status).
   useEffect(() => {
-    if (roomId && user.id) {
-      trackUserConnectivity(roomId, user.id, roomData.host_id);
+    // Ensure we have the necessary data.
+    if (roomData?.id && user?.id) {
+      // Call the utility function that periodically updates the user's `last_seen` timestamp.
+      const connectivityInterval = trackUserConnectivity(roomData.id, user.id, roomData.host_id);
+      // Cleanup function to stop the interval when the component unmounts.
+      return () => clearInterval(connectivityInterval);
     }
-    if (quote == "") {
-      setQuote(quotes());
-    }
-  }, [roomId, user.id]);
+  }, [roomData?.id, user?.id, roomData?.host_id]);
 
+  // This hook watches the game stage and updates player stats.
   useEffect(() => {
-    if (roomData.stage === "night") {
-      updatePlayerTotaleGames();
-      // router.push(`/game/${roomData.code}`);
+    // If the game stage changes to "night" and the game hasn't already been marked as played.
+    if (roomData?.stage === "night" && !hasRoomBeenPlayed) {
+      // Update the player's stats (e.g., increment total games played).
+      if (user?.id) {
+        updatePlayerState(user.id, { newGame: true });
+      }
+      // Update the state to show the countdown.
       setHasRoomBeenPlayed(true);
     }
-  }, [roomData?.stage]);
+  }, [roomData?.stage, user?.id, hasRoomBeenPlayed]);
 
-  return hasRoomBeenPlayed ? (
-    <div className="h-screen flex items-center justify-center">
-      <div className="flex items-center">
-        <Countdown icon={false} number={10} target={"/game/" + roomData.code} />
+  // This hook fetches a random quote once when the component mounts.
+  useEffect(() => {
+    setQuote(quotes());
+  }, []); // Empty dependency array means this runs only once.
+
+  // --- Event Handlers ---
+  // This function handles the "Start Game" button click (only for the host).
+  const handleStartGame = async () => {
+    // Verify that the current user is the host.
+    if (!user || user.id !== roomData?.host_id) return;
+    
+    try {
+      // Add bot players if the room is not full.
+      await addBotsIfNeeded(roomData.id, 4 - players.length);
+      // Update the room's stage in the database to "night" to start the game.
+      await supabase.from("rooms").update({ stage: "night" }).eq("id", roomData.id);
+
+    } catch (error) {
+      console.error("Error starting game:", error);
+    }
+  };
+  
+  // --- Render Logic ---
+  // Show a loading screen while fetching initial data.
+  if (isLoading) {
+    return <div className="h-screen flex items-center justify-center bg-slate-900"><Loader /></div>;
+  }
+
+  // Show the countdown screen after the game has started.
+  if (hasRoomBeenPlayed) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-900">
+        <Countdown icon={false} number={10} target={`/game/${roomData.code}`} />
       </div>
-    </div>
-  ) : (
+    );
+  }
+
+  // Render the main waiting room UI.
+  return (
     <div
-      style={{
-        backgroundImage: 'url("/assets/images/waitingBackground.webp")',
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        backgroundColor: "rgba(0, 0, 0, 0.9)",
-      }}
-      className="min-h-screen  scrollbar-hide flex flex-col"
+      style={{ backgroundImage: 'url("/assets/images/waitingBackground.webp")' }}
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col"
     >
+      {/* Display the list of players. */}
       <Players fetched_players={players} room_host_id={roomData?.host_id} />
 
-      <div className="fixed  gap-y-5 flex flex-col w-full backdrop-blur-lg bg-slate-900/20 bottom-0 justify-between items-center border-t border-slate-700/50 p-6 shadow-2xl">
-        <div className="flex  w-full items-center justify-between space-x-4">
-          {roomData && roomData.host_id !== user?.id ? (
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <div className="w-14 h-14 bg-gradient-to-br from-slate-800 to-slate-900 rounded-full flex items-center justify-center border border-slate-600/50 shadow-lg">
-                  <svg
-                    className="animate-spin h-6 w-6 text-amber-400"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                </div>
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full animate-pulse"></div>
-              </div>
-              <div className="flex flex-col">
-                <p className="text-slate-200 font-medium text-lg">
-                  Waiting for host to start game
-                </p>
-                <p className="text-slate-400 text-sm">
-                  Stage: {roomData.stage}
-                </p>
-              </div>
+      {/* Bottom bar with controls and information. */}
+      <div className="fixed gap-y-5 flex flex-col w-full backdrop-blur-lg bg-slate-900/20 bottom-0 justify-between items-center border-t border-slate-700/50 p-6 shadow-2xl">
+        <div className="flex w-full items-center justify-between space-x-4">
+          {/* Display different UI depending on whether the user is the host or a guest. */}
+          {roomData?.host_id !== user?.id ? (
+            // UI for regular players (guests).
+            <div className="text-center w-full">
+              <p className="text-slate-200 font-medium text-lg">Waiting for host to start the game...</p>
+              <p className="text-slate-400 text-sm">Stage: {roomData?.stage}</p>
             </div>
           ) : (
+            // UI for the room host.
             <>
               <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <div className="w-14 h-14 bg-gradient-to-br from-violet-700 to-violet-800 rounded-full flex items-center justify-center border border-violet-600/50 shadow-lg">
-                    <p className="text-2xl font-bold text-white">
-                      {players.length}
-                    </p>
-                  </div>
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-violet-400 rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                  </div>
-                </div>
-                <div className="flex flex-col">
-                  <p className="text-slate-200 font-medium text-lg">
-                    Players in this room
-                  </p>
-                  <p className="text-slate-400 text-sm">
-                    Stage: {roomData?.stage}
-                  </p>
-                </div>
+                <p className="text-2xl font-bold text-white">{players.length}</p>
+                <p className="text-slate-200 font-medium text-lg">Players</p>
               </div>
-
               <button
-                onClick={async () => {
-                  try {
-                    setgameStartClicked(true);
-                    if (roomData.stage === "night") {
-                      const { data, error } = await supabase
-                        .from("rooms")
-                        .update({ stage: "waiting" })
-                        .eq("id", roomId);
-                      if (error) {
-                        console.log(error);
-                      }
-                    } else {
-                      addBotsIfNeede(roomId, 4 - players.length);
-                      const { data, error } = await supabase
-                        .from("rooms")
-                        .update({ stage: "night" })
-                        .eq("id", roomId);
-                      if (error) {
-                        console.log(error);
-                      }
-                    }
-                  } catch (error) {
-                    console.log(error);
-                  }
-                }}
-                className="group relative overflow-hidden bg-gradient-to-r from-violet-600 to-violet-700 cursor-pointer hover:from-violet-700 hover:to-violet-800 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 hover:shadow-xl border border-violet-500/30"
+                onClick={handleStartGame}
+                disabled={players.length < 1} // Disable the button if there aren't enough players.
+                className="group relative overflow-hidden bg-gradient-to-r from-violet-600 to-violet-700 disabled:opacity-50 disabled:cursor-not-allowed hover:from-violet-700 hover:to-violet-800 text-white font-bold py-3 px-8 rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                <span className="relative flex items-center space-x-2">
-                  {roomData?.stage === "play" ? (
-                    <>
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span>Stop Game</span>
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        className="w-5 h-5"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span>Start Game</span>
-                    </>
-                  )}
-                </span>
+                <span>Start Game</span>
               </button>
             </>
           )}
         </div>
+        {/* Display the random quote. */}
         <p className="text-lg text-center font-bold font-['Lobster'] italic text-slate-400">
           "{quote}"
         </p>
