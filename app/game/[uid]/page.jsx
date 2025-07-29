@@ -277,6 +277,7 @@ export default function Game({ params }) {
         </div>
       </div>
       <GameActionsBar roomId={roomData.id} roomInfo={roomData} playerInfo={currentPlayer} players={players} />
+      
       {winner && <GameWinner winner={winner} playerID={currentPlayer?.id} clerkId={user?.id} currentPlayerRole={currentPlayer?.role} />}
     </>
   );
