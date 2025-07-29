@@ -60,8 +60,8 @@ export default function Game({ params }) {
 
   const botsActionsStarted = useRef(false);
   const hasShownRoleModal = useRef(false);
+  const prevStageRef = useRef(); // Ref to track the previous game stage
 
-  // ✅ FIX: Add the same robust upsertPlayer function to the Game component.
   const upsertPlayer = async (roomId, currentUser) => {
     if (!currentUser || !roomId) return;
     try {
@@ -82,30 +82,21 @@ export default function Game({ params }) {
 
   // --- Data Fetching and Initialization ---
   useEffect(() => {
-    // This effect now robustly initializes the game state, ensuring the player exists.
     const initializeGame = async () => {
-      // 1. Fetch room data.
       const { data: room, error: roomError } = await supabase.from("rooms").select("*").eq("code", uid).single();
       if (roomError || !room) { console.error("Error fetching room", roomError); return; }
       setRoomData(room);
-
-      // ✅ FIX: Ensure the current user is in the player list before fetching.
-      // This guarantees that even with a slight delay, the user will be in the game.
       if (user) {
         await upsertPlayer(room.id, user);
       }
-
-      // 2. Fetch the now-guaranteed-to-be-correct list of players.
       const { data: initialPlayers, error: playersError } = await supabase.from("players").select("*").eq("room_id", room.id).order("id", { ascending: true });
       if (playersError) { console.error("Error fetching players", playersError); return; }
       setPlayers(initialPlayers);
     };
-    
-    // Only run initialization when we have the user data from Clerk.
     if(isLoaded) {
       initializeGame();
     }
-  }, [uid, isLoaded, user]); // Dependency on `user` ensures we run this after login.
+  }, [uid, isLoaded, user]);
 
   // --- Real-time Subscriptions ---
   useEffect(() => {
@@ -137,7 +128,26 @@ export default function Game({ params }) {
     }
   }, [roomData?.id, user?.id]);
   
-  const runBotsActions = () => { /* ... Bot logic ... */ };
+  const runBotsActions = () => {
+    const bots = players.filter((p) => !p.is_human);
+    const alivePlayers = players.filter((p) => p.is_alive);
+    bots.forEach(async (bot) => {
+      if (bot.is_action_done || !bot.is_alive) return;
+      const potentialTargets = alivePlayers.filter(p => p.id !== bot.id);
+      if (potentialTargets.length === 0) return;
+      const randomTarget = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
+      if (roomData.stage === "day") {
+        await voting(bot, randomTarget, roomData.id);
+        await messaging(bot, roomData.id);
+      } else if (roomData.stage === "night") {
+        setTimeout(async () => {
+          if (bot.role === "wolf") await kill(bot, randomTarget, roomData.id);
+          else if (bot.role === "seer") await seePlayer(bot, randomTarget);
+          else if (bot.role === "doctor") await savePlayer(bot, randomTarget, roomData.id);
+        }, Math.floor(Math.random() * 7000) + 1000);
+      }
+    });
+  };
 
   // --- Game Logic ---
   useEffect(() => {
@@ -145,9 +155,6 @@ export default function Game({ params }) {
     if (roomData.roles_assigned && !hasShownRoleModal.current && currentPlayer?.role) {
       setIsRoleModalOpen(true);
       hasShownRoleModal.current = true;
-    }
-    if (roomData.stage === 'day' && (nightResult?.killed || nightResult?.saved)) {
-      // Logic for night result modal
     }
     const isGameActive = roomData.stage === 'day' || roomData.stage === 'night';
     const rolesAreSet = players.every(p => p.role !== null);
@@ -175,7 +182,23 @@ export default function Game({ params }) {
             botsActionsStarted.current = false;
         }
     }
-  }, [roomData, players, currentPlayer, nightResult]);
+  }, [roomData, players, currentPlayer]); // ✅ FIX: Removed nightResult from dependencies to decouple modal from game logic.
+
+  // ✅ FIX: New effect dedicated to handling the night result modal.
+  useEffect(() => {
+    if (roomData?.stage) {
+      // When the stage changes from night to day...
+      if (prevStageRef.current === 'night' && roomData.stage === 'day') {
+        // ...check if the subscription has already set a result.
+        // If not, it was a quiet night, so we set a default result to show the modal.
+        if (!nightResult) {
+          setNightResult({ killed: null, saved: null });
+        }
+      }
+      // Update the ref to the current stage for the next check.
+      prevStageRef.current = roomData.stage;
+    }
+  }, [roomData?.stage, nightResult]); // Depends on stage change.
 
   // --- Core Game Functions ---
   const ApplyingRoles = async () => {
