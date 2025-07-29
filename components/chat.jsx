@@ -18,7 +18,7 @@ export default function PlayersChat({
       .from("chat_messages")
       .select("*")
       .eq("room_id", roomID)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false });
     if (error) {
       console.error("Error fetching messages:", error);
     }

@@ -64,7 +64,7 @@ export default function SidePlayers({players}){
                                </h3>
                                
                                <div className="space-y-2 mt-2">
-                                   <div className="flex items-center gap-2">
+                                   {/* <div className="flex items-center gap-2">
                                        <span className="text-slate-400 text-sm">Role:</span>
                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                            player.role === 'wolf' 
@@ -78,7 +78,7 @@ export default function SidePlayers({players}){
                                            {player.role}
                                        </span>
                                    </div>
-                                   
+                                    */}
                                    <div className="flex items-center w-full justify-between">
                                        
                                        

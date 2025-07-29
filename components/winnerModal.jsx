@@ -139,9 +139,9 @@ export default function GameWinner({
             }`}
           >
             <FaCrown className="text-sm" />
-            {winner.role == "wolf"
-              ? "Wolf Wins" + "(" + winner.name + ")"
-              : "Villagers Wins"}
+            {winner.role === "wolf"
+              ? `Wolf Won (${winner.name})`
+              : `Villagers Win`}
           </motion.div>
         </div>
 

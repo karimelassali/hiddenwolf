@@ -13,7 +13,7 @@ export async function addBotsIfNeeded(roomID,botCount){
             name: faker.person.firstName(),
             role: null,
             is_alive: true,
-            vote_to: null,
+            voted_to: null,
             player_id: uuidv4(),
             is_human:false,
             profile:avatarUrl,
