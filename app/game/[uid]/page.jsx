@@ -167,27 +167,19 @@ export default function Game({ params }) {
       hasShownRoleModal.current = true;
     }
 
-    // ✅ FIX: This is the new, robust game loop trigger.
-    // It runs only when the stage actually changes.
     if (roomData.stage !== prevStageRef.current) {
-      // If the current player is the host, they are responsible for managing the game turn.
       if (currentPlayer?.player_id === roomData.host_id) {
         const handleNewTurn = async () => {
-          // 1. Reset all player 'is_action_done' flags for the new phase.
           const updates = playersRef.current.map(p => ({ id: p.id, is_action_done: false }));
           await supabase.from("players").upsert(updates);
-          
-          // 2. Run the bot actions for the new stage.
           runBotsActions();
         };
         handleNewTurn();
       }
     }
     
-    // Update the ref at the end so we can detect the next change.
     prevStageRef.current = roomData.stage;
 
-    // --- Winner Check Logic (runs independently) ---
     const isGameActive = roomData.stage === 'day' || roomData.stage === 'night';
     const rolesAreSet = players.every(p => p.role !== null);
     if (isGameActive && rolesAreSet) {
@@ -200,12 +192,14 @@ export default function Game({ params }) {
           supabase.from("rooms").update({ stage: "ended" }).eq("id", roomData.id).then();
         } else if (aliveNonWolves.length === 0) {
           const wolfNames = aliveWolves.map(w => w.name).join(', ');
-          setWinner({ team: 'Wolves', name: wolfNames, role: 'wolf', players: aliveWolves });
+          setWinner({ team: 'Wolves', name: wolfNames, role: 'wolf', players: alivePlayers });
           supabase.from("rooms").update({ stage: "ended" }).eq("id", roomData.id).then();
         }
       }
     }
-  }, [roomData.stage, players, currentPlayer]); // Depends on stage, players, and current player.
+  // ✅ FIX: Use optional chaining (?.) to safely access `roomData.stage`.
+  // This prevents the app from crashing if `roomData` is `null` during the initial render.
+  }, [roomData?.stage, players, currentPlayer]);
 
   useEffect(() => {
     if (roomData?.stage) {
