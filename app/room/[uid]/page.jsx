@@ -2,11 +2,11 @@
 
 // --- Import Core Libraries from React & Next.js ---
 import React, { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs"; // Hook to get data for the currently logged-in user via Clerk.
-import { useRouter } from "next/navigation"; // Hook to control client-side navigation.
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 // --- Import Supabase Client ---
-import { supabase } from "@/lib/supabase"; // Supabase client for database interaction.
+import { supabase } from "@/lib/supabase";
 
 // --- Import UI Components ---
 import { Players } from "@/components/Players";
@@ -22,7 +22,6 @@ import { JoinSound } from "@/utils/sounds";
 
 // --- Component Definition ---
 export default function Room({ params }) {
-  // ✅ FIX: Use React.use() to correctly unwrap params as recommended by Next.js.
   const { uid } = React.use(params);
   const router = useRouter();
   const { user, isLoaded } = useUser();
@@ -61,103 +60,70 @@ export default function Room({ params }) {
   };
   
   // --- useEffect Hooks ---
-
-  // ✅ FIX: Separated logic into dependent useEffects to prevent race conditions.
-  // Effect 1: Fetch the core room data. This is the first and most critical step.
   useEffect(() => {
     if (!uid) return;
     
-    const fetchRoom = async () => {
+    const initializeRoom = async () => {
       setIsLoading(true);
-      const { data: room, error } = await supabase
-        .from("rooms")
-        .select("*")
-        .eq("code", uid)
-        .single();
-
-      if (error || !room) {
-        console.error("Room not found. Redirecting.", error);
+      // 1. Fetch room data
+      const { data: room, error: roomError } = await supabase.from("rooms").select("*").eq("code", uid).single();
+      if (roomError || !room) {
+        console.error("Room not found. Redirecting.", roomError);
         router.push("/");
-      } else {
-        setRoomData(room);
-        // Note: We don't stop loading here yet. We wait for the player setup.
+        return;
       }
-    };
+      setRoomData(room);
 
-    fetchRoom();
-  }, [uid, router]);
+      // 2. Ensure user is upserted before fetching players
+      if (isLoaded && user) {
+        await upsertPlayer(room.id, user);
+      }
 
-  // Effect 2: Once room data and user are available, fetch players and add the current user.
-  useEffect(() => {
-    // This effect waits for the roomData from Effect 1 and the user from Clerk.
-    if (!roomData || !isLoaded) {
-      return; // Do nothing if we don't have the room or user auth status.
-    }
-
-    // If we have the room but no logged-in user, we can stop loading.
-    if (!user) {
-      setIsLoading(false);
-      return;
-    }
-
-    const setupPlayerInRoom = async () => {
-      // 1. Fetch the current list of players.
-      const { data: initialPlayers, error: playersError } = await supabase
-        .from("players")
-        .select("*")
-        .eq("room_id", roomData.id)
-        .order("id", { ascending: true });
-
+      // 3. Fetch initial players
+      const { data: initialPlayers, error: playersError } = await supabase.from("players").select("*").eq("room_id", room.id).order("id", { ascending: true });
       if (playersError) {
         console.error("Failed to fetch players", playersError);
       } else {
         setPlayers(initialPlayers);
       }
-
-      // 2. Now that we have the room_id and user, reliably add the player to the database.
-      await upsertPlayer(roomData.id, user);
-
-      // 3. All initial setup is complete, we can now show the page.
+      
       setIsLoading(false);
     };
 
-    setupPlayerInRoom();
-  }, [roomData, user, isLoaded]); // This dependency chain ensures correct order.
+    initializeRoom();
+  }, [uid, isLoaded, user, router]);
 
-
-  // Effect 3: Real-time subscriptions. This depends on having a room ID.
+  // Real-time subscriptions
   useEffect(() => {
     if (!roomData?.id) return;
 
+    // ✅ FIX: Added a filter to the players subscription to only listen for changes in the CURRENT room.
+    // This solves the "nuclear problem" where players from different rooms could see each other.
     const playersChannel = supabase
-      .channel(`public:players:room_id=eq.${roomData.id}`)
+      .channel(`room-players-${roomData.id}`) // Unique channel name
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "players" },
+        { event: "*", schema: "public", table: "players", filter: `room_id=eq.${roomData.id}` },
         (payload) => {
           if (payload.eventType === "INSERT") {
             JoinSound();
             setPlayers(prevPlayers => [...prevPlayers, payload.new]);
           }
           if (payload.eventType === "UPDATE") {
-            setPlayers(prevPlayers =>
-              prevPlayers.map(p => (p.id === payload.new.id ? payload.new : p))
-            );
+            setPlayers(prevPlayers => prevPlayers.map(p => (p.id === payload.new.id ? payload.new : p)));
           }
           if (payload.eventType === "DELETE") {
-            setPlayers(prevPlayers =>
-              prevPlayers.filter(p => p.id !== payload.old.id)
-            );
+            setPlayers(prevPlayers => prevPlayers.filter(p => p.id !== payload.old.id));
           }
         }
       )
       .subscribe();
 
     const roomChannel = supabase
-      .channel(`public:rooms:id=eq.${roomData.id}`)
+      .channel(`room-data-${roomData.id}`) // Unique channel name
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "rooms" },
+        { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomData.id}` },
         (payload) => {
           setRoomData(prevData => ({ ...prevData, ...payload.new }));
         }
@@ -170,11 +136,11 @@ export default function Room({ params }) {
     };
   }, [roomData?.id]);
 
-  // Other side effects for connectivity, game state, and quotes.
+  // Other side effects
   useEffect(() => {
     if (roomData?.id && user?.id) {
-      const connectivityInterval = trackUserConnectivity(roomData.id, user.id, roomData.host_id);
-      return () => clearInterval(connectivityInterval);
+      const interval = trackUserConnectivity(roomData.id, user.id, roomData.host_id);
+      return () => clearInterval(interval);
     }
   }, [roomData?.id, user?.id, roomData?.host_id]);
 
