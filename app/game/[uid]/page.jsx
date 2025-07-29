@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useUser } from "@clerk/nextjs";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast, Toaster } from "react-hot-toast";
 
 // --- Import Icons & Utils ---
@@ -14,8 +14,15 @@ import {
   FaGavel,
   FaUsers,
   FaGamepad,
+  FaSun,
+  FaMoon,
 } from "react-icons/fa";
-import { GiWolfHowl, GiHeartShield, GiDeathSkull } from "react-icons/gi";
+import {
+  GiWolfHowl,
+  GiHeartShield,
+  GiDeathSkull,
+  GiTiedScroll,
+} from "react-icons/gi";
 import { supabase } from "@/lib/supabase";
 import {
   kill,
@@ -310,6 +317,128 @@ const RoleRevealModal = ({ role, onClose }) => (
   </motion.div>
 );
 
+// --- REDESIGNED Result Modal ---
+const ResultModal = ({ result, onClose, type }) => {
+  const isNight = type === "night";
+
+  const content = {
+    night: {
+      title: "Dawn Breaks...",
+      icon: <FaSun className="text-yellow-400" />,
+      scenarios: {
+        killed: {
+          icon: <GiDeathSkull className="text-red-500" />,
+          message: (name) => (
+            <>
+              <span className="font-bold text-red-400">{name}</span> was killed
+              in the night.
+            </>
+          ),
+          description: "The village mourns a loss.",
+        },
+        saved: {
+          icon: <GiHeartShield className="text-green-500" />,
+          message: (name) => (
+            <>
+              <span className="font-bold text-green-400">{name}</span> was
+              attacked, but saved!
+            </>
+          ),
+          description: "The doctor's intervention was successful.",
+        },
+        quiet: {
+          icon: <FaMoon className="text-blue-300" />,
+          message: () => "The night was eerily quiet.",
+          description: "No one was attacked.",
+        },
+      },
+    },
+    day: {
+      title: "The Verdict Is In...",
+      icon: <FaGavel className="text-amber-500" />,
+      scenarios: {
+        eliminated: {
+          icon: <FaGavel className="text-amber-500" />,
+          message: (name) => (
+            <>
+              <span className="font-bold text-amber-400">{name}</span> has been
+              voted out.
+            </>
+          ),
+          description: "The village has made its choice.",
+        },
+        noOneEliminated: {
+          icon: <GiTiedScroll className="text-gray-400" />,
+          message: () => "The vote was tied.",
+          description: "No one was eliminated today.",
+        },
+      },
+    },
+  };
+
+  const currentContent = content[type];
+  const scenarioKey = Object.keys(result)[0];
+  const scenario = currentContent.scenarios[scenarioKey];
+  const playerName = result[scenarioKey];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.7, y: 50, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.7, opacity: 0 }}
+        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-2xl shadow-2xl text-center border border-gray-700 max-w-md w-full"
+      >
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 p-3 rounded-full border-4 border-gray-700">
+          <motion.div
+            animate={{
+              rotate: [0, 10, -10, 0],
+              transition: { repeat: Infinity, duration: 2 },
+            }}
+          >
+            {currentContent.icon}
+          </motion.div>
+        </div>
+
+        <h2 className="text-2xl font-bold text-gray-200 mt-8 mb-4">
+          {currentContent.title}
+        </h2>
+
+        <div className="flex flex-col items-center justify-center gap-4 my-6">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1, transition: { delay: 0.2, type: "spring" } }}
+            className="text-7xl"
+          >
+            {scenario.icon}
+          </motion.div>
+          <p className="text-xl text-gray-300">
+            {scenario.message(playerName)}
+          </p>
+          <p className="text-sm text-gray-500">{scenario.description}</p>
+        </div>
+
+        <motion.button
+          whileHover={{ scale: 1.05, backgroundColor: "#6b21a8" }} // purple-700
+          whileTap={{ scale: 0.95 }}
+          onClick={onClose}
+          className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg transition-colors"
+        >
+          Continue
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  );
+};
+
 // --- Main Game Component ---
 export default function Game({ params }) {
   // --- State Declarations ---
@@ -329,7 +458,6 @@ export default function Game({ params }) {
   const playersRef = useRef(players);
   const prevPlayersRef = useRef(players);
 
-  // ✅ NEW STATE: Manages which view ('game', 'players', or 'chat') is active on mobile
   const [mobileView, setMobileView] = useState("game");
 
   // --- Side Effects to keep refs updated ---
@@ -375,6 +503,7 @@ export default function Game({ params }) {
         return;
       }
       setRoomData(room);
+      prevStageRef.current = room.stage; // Initialize prevStageRef here
       if (user) {
         await upsertPlayer(room.id, user);
       }
@@ -486,7 +615,7 @@ export default function Game({ params }) {
       const randomTarget =
         potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
       if (roomData.stage === "day") {
-        await voting(bot, randomTarget, roomData.id);
+        await voting(bot, randomTarget);
         await messaging(bot, roomData.id, playersRef.current, randomTarget);
       } else if (roomData.stage === "night") {
         setTimeout(async () => {
@@ -506,9 +635,124 @@ export default function Game({ params }) {
     });
   };
 
-  // --- Game Logic ---
+  // ✅ --- UNIFIED & FIXED LOGIC for Stage Change Results & Host Actions ---
+  useEffect(() => {
+    // Don't run on initial load or if stage hasn't changed.
+    if (
+      !prevStageRef.current ||
+      !roomData ||
+      roomData.stage === prevStageRef.current
+    ) {
+      return;
+    }
+
+    // --- Night to Day Transition ---
+    if (prevStageRef.current === "night" && roomData.stage === "day") {
+      const killedPlayer = prevPlayersRef.current.find(
+        (p) =>
+          p.is_alive &&
+          !playersRef.current.find((p2) => p2.id === p.id)?.is_alive
+      );
+      const savedPlayer = playersRef.current.find((p) => p.is_saved);
+
+      if (killedPlayer) {
+        setNightResult({ killed: killedPlayer.name });
+      } else if (savedPlayer) {
+        // No one died, but someone was saved. This implies a successful save.
+        setNightResult({ saved: savedPlayer.name });
+      } else {
+        setNightResult({ quiet: true });
+      }
+    }
+
+    // --- Day to Night Transition (Vote Result) ---
+    if (prevStageRef.current === "day" && roomData.stage === "night") {
+      const votes = {};
+      prevPlayersRef.current.forEach((p) => {
+        if (p.is_alive && p.voted_to) {
+          votes[p.voted_to] = (votes[p.voted_to] || 0) + 1;
+        }
+      });
+
+      let maxVotes = 0;
+      Object.values(votes).forEach((voteCount) => {
+        if (voteCount > maxVotes) {
+          maxVotes = voteCount;
+        }
+      });
+
+      const playersWithMaxVotes = [];
+      if (maxVotes > 0) {
+        for (const playerId in votes) {
+          if (votes[playerId] === maxVotes) {
+            playersWithMaxVotes.push(playerId);
+          }
+        }
+      }
+
+      if (playersWithMaxVotes.length === 1) {
+        const votedOutId = playersWithMaxVotes[0];
+        const votedOutPlayer = prevPlayersRef.current.find(
+          (p) => p.id === parseInt(votedOutId)
+        );
+
+        if (votedOutPlayer) {
+          if (currentPlayer?.player_id === roomData.host_id) {
+            supabase
+              .from("players")
+              .update({ is_alive: false })
+              .eq("id", votedOutPlayer.id)
+              .then();
+          }
+          setDayResult({ eliminated: votedOutPlayer.name });
+        } else {
+          setDayResult({ noOneEliminated: true });
+        }
+      } else {
+        setDayResult({ noOneEliminated: true });
+      }
+    }
+
+    // --- Host handles new turn setup & Bot Actions ---
+    if (currentPlayer?.player_id === roomData.host_id) {
+      const handleNewTurn = async () => {
+        if (roomData.stage === "night") {
+          await supabase
+            .from("rooms")
+            .update({ round: roomData.round + 1 })
+            .eq("id", roomData.id);
+        }
+        // Reset action status for the new phase for all players
+        const updates = playersRef.current.map((p) => ({
+          id: p.id,
+          is_action_done: false,
+        }));
+        await supabase.from("players").upsert(updates);
+
+        // If a new NIGHT is starting, also reset save and vote statuses
+        if (roomData.stage === "night") {
+          const nightResetUpdates = playersRef.current.map((p) => ({
+            id: p.id,
+            is_saved: false,
+            voted_to: null,
+          }));
+          await supabase.from("players").upsert(nightResetUpdates);
+        }
+
+        runBotsActions();
+      };
+      handleNewTurn();
+    }
+
+    // Update the ref for the next cycle
+    prevStageRef.current = roomData.stage;
+  }, [roomData?.stage, currentPlayer]);
+
+  // --- Main Game Logic (Winner Check & Role Modal) ---
   useEffect(() => {
     if (!players.length || !roomData) return;
+
+    // Show role modal once
     if (
       roomData.roles_assigned &&
       !hasShownRoleModal.current &&
@@ -518,80 +762,7 @@ export default function Game({ params }) {
       hasShownRoleModal.current = true;
     }
 
-    if (roomData.stage !== prevStageRef.current) {
-      if (prevStageRef.current === "night" && roomData.stage === "day") {
-        const previouslyAlive = prevPlayersRef.current.filter(
-          (p) => p.is_alive
-        );
-        const nowAlive = playersRef.current.filter((p) => p.is_alive);
-        const killedPlayer = previouslyAlive.find(
-          (p) => !nowAlive.some((ap) => ap.id === p.id)
-        );
-        const savedPlayer = playersRef.current.find((p) => p.is_saved);
-
-        if (killedPlayer && savedPlayer && killedPlayer.id === savedPlayer.id) {
-          setNightResult({ saved: savedPlayer.name });
-        } else if (killedPlayer) {
-          setNightResult({ killed: killedPlayer.name });
-        } else {
-          setNightResult({ quiet: true });
-        }
-      }
-
-      if (prevStageRef.current === "day" && roomData.stage === "night") {
-        const votes = {};
-        prevPlayersRef.current.forEach((p) => {
-          if (p.voted_to) {
-            votes[p.voted_to] = (votes[p.voted_to] || 0) + 1;
-          }
-        });
-
-        let maxVotes = 0;
-        let votedOutId = null;
-        for (const playerId in votes) {
-          if (votes[playerId] > maxVotes) {
-            maxVotes = votes[playerId];
-            votedOutId = playerId;
-          }
-        }
-
-        const votedOutPlayer = prevPlayersRef.current.find(
-          (p) => p.id === parseInt(votedOutId)
-        );
-        if (votedOutPlayer) {
-          supabase
-            .from("players")
-            .update({ is_alive: false })
-            .eq("id", votedOutPlayer.id)
-            .then();
-          setDayResult({ eliminated: votedOutPlayer.name });
-        } else {
-          setDayResult({ noOneEliminated: true });
-        }
-      }
-
-      if (currentPlayer?.player_id === roomData.host_id) {
-        const handleNewTurn = async () => {
-          if (roomData.stage === "night") {
-            await supabase
-              .from("rooms")
-              .update({ round: roomData.round + 1 })
-              .eq("id", roomData.id);
-          }
-          const updates = playersRef.current.map((p) => ({
-            id: p.id,
-            is_action_done: false,
-            is_saved: false,
-            voted_to: null,
-          }));
-          await supabase.from("players").upsert(updates);
-          runBotsActions();
-        };
-        handleNewTurn();
-      }
-    }
-    prevStageRef.current = roomData.stage;
-
+    // Winner check logic
     const isGameActive = roomData.stage === "day" || roomData.stage === "night";
     const rolesAreSet = players.every((p) => p.role !== null);
 
@@ -633,7 +804,7 @@ export default function Game({ params }) {
         }
       }
     }
-  }, [roomData?.stage, players, currentPlayer]);
+  }, [players, currentPlayer, roomData?.stage]);
 
   // --- Core Game Functions ---
   const ApplyingRoles = async () => {
@@ -717,35 +888,6 @@ export default function Game({ params }) {
     );
   }
 
-  // --- Result Modals ---
-  const ResultModal = ({ title, children, onClose }) => (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.8, y: 50 }}
-        animate={{ scale: 1, y: 0 }}
-        onClick={(e) => e.stopPropagation()}
-        className="relative bg-slate-800 p-6 lg:p-8 rounded-xl shadow-2xl text-center border border-slate-700 max-w-sm w-full"
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors p-1"
-        >
-          <FaTimes size={20} />
-        </button>
-        <h2 className="text-xl lg:text-2xl font-bold text-slate-200 mb-6">
-          {title}
-        </h2>
-        {children}
-      </motion.div>
-    </motion.div>
-  );
-
   // --- Main Game UI ---
   return (
     <div className="min-h-screen z-30 bg-slate-900 text-white flex flex-col">
@@ -762,62 +904,30 @@ export default function Game({ params }) {
         }}
       />
 
-      {/* Role Modal */}
-      {isRoleModalOpen && currentPlayer?.role && (
-        <RoleRevealModal
-          role={currentPlayer.role}
-          onClose={() => setIsRoleModalOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {isRoleModalOpen && currentPlayer?.role && (
+          <RoleRevealModal
+            role={currentPlayer.role}
+            onClose={() => setIsRoleModalOpen(false)}
+          />
+        )}
 
-      {/* Night Result Modal */}
-      {nightResult && (
-        <ResultModal
-          title="The Night Is Over..."
-          onClose={() => setNightResult(null)}
-        >
-          {nightResult.killed ? (
-            <div className="flex flex-col items-center justify-center gap-4 text-red-400">
-              <GiDeathSkull size={50} />
-              <p className="text-xl font-semibold">
-                {nightResult.killed} was killed.
-              </p>
-            </div>
-          ) : nightResult.saved ? (
-            <div className="flex flex-col items-center justify-center gap-4 text-green-400">
-              <GiHeartShield size={50} />
-              <p className="text-xl font-semibold">
-                {nightResult.saved} was attacked, but saved!
-              </p>
-            </div>
-          ) : (
-            <p className="text-xl text-slate-300">
-              The night was quiet. No one was attacked.
-            </p>
-          )}
-        </ResultModal>
-      )}
+        {nightResult && (
+          <ResultModal
+            result={nightResult}
+            onClose={() => setNightResult(null)}
+            type="night"
+          />
+        )}
 
-      {/* Day Result Modal */}
-      {dayResult && (
-        <ResultModal
-          title="The Village Has Spoken..."
-          onClose={() => setDayResult(null)}
-        >
-          {dayResult.eliminated ? (
-            <div className="flex flex-col items-center justify-center gap-4 text-amber-400">
-              <FaGavel size={45} />
-              <p className="text-xl font-semibold">
-                {dayResult.eliminated} has been voted out.
-              </p>
-            </div>
-          ) : (
-            <p className="text-xl text-slate-300">
-              The vote was tied. No one was eliminated.
-            </p>
-          )}
-        </ResultModal>
-      )}
+        {dayResult && (
+          <ResultModal
+            result={dayResult}
+            onClose={() => setDayResult(null)}
+            type="day"
+          />
+        )}
+      </AnimatePresence>
 
       <GameNavbar
         roomData={roomData}
@@ -861,8 +971,7 @@ export default function Game({ params }) {
         </div>
       </main>
 
-       {/* ✅ UPDATED: The action bar now gets the state and setter for the mobile view */}
-       <GameActionsBar
+      <GameActionsBar
         roomId={roomData.id}
         roomInfo={roomData}
         playerInfo={currentPlayer}

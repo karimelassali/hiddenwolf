@@ -35,7 +35,6 @@ export async function savePlayer(doctor, target) {
 // ✅ UPDATED: The voting function now updates the `players` table, which is what your
 // Game component expects to correctly process votes and determine who is eliminated.
 export async function voting(voter, target) {
-  if (!voter || !target || voter.is_action_done) return;
 
   await supabase
     .from("players")
