@@ -58,10 +58,8 @@ export default function Game({ params }) {
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [nightResult, setNightResult] = useState(null);
 
-  const botsActionsStarted = useRef(false);
   const hasShownRoleModal = useRef(false);
   const prevStageRef = useRef();
-  // ✅ FIX: Create a ref to hold the latest players array. This allows setTimeout callbacks to access the most current data.
   const playersRef = useRef(players);
 
   // --- Side Effects to keep refs updated ---
@@ -135,37 +133,27 @@ export default function Game({ params }) {
     }
   }, [roomData?.id, user?.id]);
   
-  // ✅ FIX: The bot action logic is updated to prevent targeting dead players.
   const runBotsActions = () => {
-    const bots = players.filter((p) => !p.is_human);
-    
+    const bots = playersRef.current.filter((p) => !p.is_human);
     bots.forEach(async (bot) => {
       if (bot.is_action_done || !bot.is_alive) return;
-
+      const alivePlayers = playersRef.current.filter((p) => p.is_alive);
+      const potentialTargets = alivePlayers.filter(p => p.id !== bot.id);
+      if (potentialTargets.length === 0) return;
+      const randomTarget = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
       if (roomData.stage === "day") {
-        // Day actions are simpler and can be done immediately.
-        const alivePlayers = players.filter((p) => p.is_alive);
-        const potentialTargets = alivePlayers.filter(p => p.id !== bot.id);
-        if (potentialTargets.length === 0) return;
-        const randomTarget = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
         await voting(bot, randomTarget, roomData.id);
         await messaging(bot, roomData.id);
       } else if (roomData.stage === "night") {
-        // For night actions, we use a timeout.
         setTimeout(async () => {
-          // Inside the timeout, use the ref (`playersRef.current`) to get the LATEST player list.
           const currentPlayers = playersRef.current;
-          const alivePlayers = currentPlayers.filter((p) => p.is_alive);
-          const potentialTargets = alivePlayers.filter(p => p.id !== bot.id);
-          
-          if (potentialTargets.length === 0) return; // No one to target.
-
-          const randomTarget = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
-
-          // Now, perform the action on a guaranteed-to-be-alive target.
-          if (bot.role === "wolf") await kill(bot, randomTarget, roomData.id);
-          else if (bot.role === "seer") await seePlayer(bot, randomTarget);
-          else if (bot.role === "doctor") await savePlayer(bot, randomTarget, roomData.id);
+          const currentAlivePlayers = currentPlayers.filter((p) => p.is_alive);
+          const currentTargets = currentAlivePlayers.filter(p => p.id !== bot.id);
+          if (currentTargets.length === 0) return;
+          const finalTarget = currentTargets[Math.floor(Math.random() * currentTargets.length)];
+          if (bot.role === "wolf") await kill(bot, finalTarget, roomData.id);
+          else if (bot.role === "seer") await seePlayer(bot, finalTarget);
+          else if (bot.role === "doctor") await savePlayer(bot, finalTarget, roomData.id);
         }, Math.floor(Math.random() * 7000) + 1000);
       }
     });
@@ -178,6 +166,28 @@ export default function Game({ params }) {
       setIsRoleModalOpen(true);
       hasShownRoleModal.current = true;
     }
+
+    // ✅ FIX: This is the new, robust game loop trigger.
+    // It runs only when the stage actually changes.
+    if (roomData.stage !== prevStageRef.current) {
+      // If the current player is the host, they are responsible for managing the game turn.
+      if (currentPlayer?.player_id === roomData.host_id) {
+        const handleNewTurn = async () => {
+          // 1. Reset all player 'is_action_done' flags for the new phase.
+          const updates = playersRef.current.map(p => ({ id: p.id, is_action_done: false }));
+          await supabase.from("players").upsert(updates);
+          
+          // 2. Run the bot actions for the new stage.
+          runBotsActions();
+        };
+        handleNewTurn();
+      }
+    }
+    
+    // Update the ref at the end so we can detect the next change.
+    prevStageRef.current = roomData.stage;
+
+    // --- Winner Check Logic (runs independently) ---
     const isGameActive = roomData.stage === 'day' || roomData.stage === 'night';
     const rolesAreSet = players.every(p => p.role !== null);
     if (isGameActive && rolesAreSet) {
@@ -195,16 +205,7 @@ export default function Game({ params }) {
         }
       }
     }
-    if (currentPlayer?.player_id === roomData.host_id) {
-        if (roomData.stage === "night" && !botsActionsStarted.current) {
-            runBotsActions();
-            botsActionsStarted.current = true;
-        } else if (roomData.stage === "day" && botsActionsStarted.current) {
-            runBotsActions();
-            botsActionsStarted.current = false;
-        }
-    }
-  }, [roomData, players, currentPlayer]);
+  }, [roomData.stage, players, currentPlayer]); // Depends on stage, players, and current player.
 
   useEffect(() => {
     if (roomData?.stage) {
@@ -213,7 +214,6 @@ export default function Game({ params }) {
           setNightResult({ killed: null, saved: null });
         }
       }
-      prevStageRef.current = roomData.stage;
     }
   }, [roomData?.stage, nightResult]);
 
