@@ -60,7 +60,14 @@ export default function Game({ params }) {
 
   const botsActionsStarted = useRef(false);
   const hasShownRoleModal = useRef(false);
-  const prevStageRef = useRef(); // Ref to track the previous game stage
+  const prevStageRef = useRef();
+  // ✅ FIX: Create a ref to hold the latest players array. This allows setTimeout callbacks to access the most current data.
+  const playersRef = useRef(players);
+
+  // --- Side Effects to keep refs updated ---
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
 
   const upsertPlayer = async (roomId, currentUser) => {
     if (!currentUser || !roomId) return;
@@ -116,7 +123,7 @@ export default function Game({ params }) {
     return () => { supabase.removeChannel(playersSubscription); supabase.removeChannel(roomSubscription); };
   }, [roomData?.id]);
 
-  // --- Derived State and Side Effects ---
+  // --- Derived State ---
   useEffect(() => {
     if (user && players.length > 0) setCurrentPlayer(players.find((p) => p.player_id === user.id) || null);
   }, [user, players]);
@@ -128,19 +135,34 @@ export default function Game({ params }) {
     }
   }, [roomData?.id, user?.id]);
   
+  // ✅ FIX: The bot action logic is updated to prevent targeting dead players.
   const runBotsActions = () => {
     const bots = players.filter((p) => !p.is_human);
-    const alivePlayers = players.filter((p) => p.is_alive);
+    
     bots.forEach(async (bot) => {
       if (bot.is_action_done || !bot.is_alive) return;
-      const potentialTargets = alivePlayers.filter(p => p.id !== bot.id);
-      if (potentialTargets.length === 0) return;
-      const randomTarget = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
+
       if (roomData.stage === "day") {
+        // Day actions are simpler and can be done immediately.
+        const alivePlayers = players.filter((p) => p.is_alive);
+        const potentialTargets = alivePlayers.filter(p => p.id !== bot.id);
+        if (potentialTargets.length === 0) return;
+        const randomTarget = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
         await voting(bot, randomTarget, roomData.id);
         await messaging(bot, roomData.id);
       } else if (roomData.stage === "night") {
+        // For night actions, we use a timeout.
         setTimeout(async () => {
+          // Inside the timeout, use the ref (`playersRef.current`) to get the LATEST player list.
+          const currentPlayers = playersRef.current;
+          const alivePlayers = currentPlayers.filter((p) => p.is_alive);
+          const potentialTargets = alivePlayers.filter(p => p.id !== bot.id);
+          
+          if (potentialTargets.length === 0) return; // No one to target.
+
+          const randomTarget = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
+
+          // Now, perform the action on a guaranteed-to-be-alive target.
           if (bot.role === "wolf") await kill(bot, randomTarget, roomData.id);
           else if (bot.role === "seer") await seePlayer(bot, randomTarget);
           else if (bot.role === "doctor") await savePlayer(bot, randomTarget, roomData.id);
@@ -182,23 +204,18 @@ export default function Game({ params }) {
             botsActionsStarted.current = false;
         }
     }
-  }, [roomData, players, currentPlayer]); // ✅ FIX: Removed nightResult from dependencies to decouple modal from game logic.
+  }, [roomData, players, currentPlayer]);
 
-  // ✅ FIX: New effect dedicated to handling the night result modal.
   useEffect(() => {
     if (roomData?.stage) {
-      // When the stage changes from night to day...
       if (prevStageRef.current === 'night' && roomData.stage === 'day') {
-        // ...check if the subscription has already set a result.
-        // If not, it was a quiet night, so we set a default result to show the modal.
         if (!nightResult) {
           setNightResult({ killed: null, saved: null });
         }
       }
-      // Update the ref to the current stage for the next check.
       prevStageRef.current = roomData.stage;
     }
-  }, [roomData?.stage, nightResult]); // Depends on stage change.
+  }, [roomData?.stage, nightResult]);
 
   // --- Core Game Functions ---
   const ApplyingRoles = async () => {
@@ -277,7 +294,6 @@ export default function Game({ params }) {
         </div>
       </div>
       <GameActionsBar roomId={roomData.id} roomInfo={roomData} playerInfo={currentPlayer} players={players} />
-      
       {winner && <GameWinner winner={winner} playerID={currentPlayer?.id} clerkId={user?.id} currentPlayerRole={currentPlayer?.role} />}
     </>
   );
