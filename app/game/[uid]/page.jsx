@@ -8,7 +8,13 @@ import { motion } from "framer-motion";
 import { toast, Toaster } from "react-hot-toast";
 
 // --- Import Icons & Utils ---
-import { FaDice, FaArrowRight, FaHourglass, FaTimes, FaGavel } from "react-icons/fa";
+import {
+  FaHourglass,
+  FaTimes,
+  FaGavel,
+  FaUsers,
+  FaGamepad,
+} from "react-icons/fa";
 import { GiWolfHowl, GiHeartShield, GiDeathSkull } from "react-icons/gi";
 import { supabase } from "@/lib/supabase";
 import {
@@ -28,43 +34,262 @@ import PlayersChat from "@/components/chat";
 import { AnimatedTooltipPeople } from "@/components/tooltip";
 
 // --- Dynamically Import Components ---
-const StageResult = dynamic(() => import("@/components/ui/stageResult"), {
-  ssr: false,
-});
 const SidePlayers = dynamic(() => import("@/components/sidePlayers"), {
   ssr: false,
 });
-const GameBox = dynamic(() => import("@/components/gameBox"), { ssr: false });
 const GameWinner = dynamic(() => import("@/components/winnerModal"), {
   ssr: false,
 });
 
-// --- Simple Role Reveal Modal Component ---
+// --- Enhanced Game Box Component ---
+const EnhancedGameBox = ({ roomData, players, currentPlayerId }) => {
+  const [positions, setPositions] = useState({});
+  const containerRef = useRef(null);
+
+  const dayBackground = "/assets/images/day.png";
+  const nightBackground = "/assets/images/night.png";
+
+  // Initialize player positions in a circle
+  useEffect(() => {
+    if (players.length === 0) return;
+    const initialPositions = {};
+    const alivePlayers = players.filter((p) => p.is_alive);
+    const count = alivePlayers.length;
+
+    alivePlayers.forEach((player, index) => {
+      const angle = (index / count) * 2 * Math.PI;
+      const radius = Math.min(35, 10 + count * 2); // Radius adjusts with player count
+      initialPositions[player.id] = {
+        x: 50 + radius * Math.cos(angle),
+        y: 50 + radius * Math.sin(angle),
+      };
+    });
+    // Position dead players at the bottom
+    players
+      .filter((p) => !p.is_alive)
+      .forEach((player, index) => {
+        initialPositions[player.id] = { x: 20 + index * 15, y: 90 };
+      });
+
+    setPositions(initialPositions);
+  }, [players.length, roomData.stage]); // Re-calculate on stage change to reset positions
+
+  // Handle random movement during night
+  useEffect(() => {
+    if (roomData.stage !== "night") return;
+
+    const interval = setInterval(() => {
+      setPositions((prevPositions) => {
+        const newPositions = { ...prevPositions };
+        players.forEach((player) => {
+          if (!player.is_alive) return;
+          const currentPos = prevPositions[player.id] || { x: 50, y: 50 };
+          newPositions[player.id] = {
+            x: Math.max(
+              10,
+              Math.min(90, currentPos.x + (Math.random() * 6 - 3))
+            ),
+            y: Math.max(
+              10,
+              Math.min(90, currentPos.y + (Math.random() * 6 - 3))
+            ),
+          };
+        });
+        return newPositions;
+      });
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [roomData.stage, players]);
+
+  const isNight = roomData.stage === "night";
+  const alivePlayers = players.filter((p) => p.is_alive);
+
+  return (
+    <div className="flex-1 w-full h-full min-h-[400px] lg:min-h-0 relative">
+      <div
+        ref={containerRef}
+        className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-1000 bg-cover bg-center"
+        style={{
+          backgroundImage: `url(${isNight ? nightBackground : dayBackground})`,
+        }}
+      >
+        {/* Overlay for better contrast */}
+        <div
+          className={`absolute inset-0 transition-colors duration-1000 ${
+            isNight ? "bg-black/40" : "bg-blue-300/10"
+          }`}
+        />
+
+        {/* Stage indicator */}
+        <div className="absolute top-4 left-4 z-10">
+          <div
+            className={`px-3 py-2 rounded-lg backdrop-blur-sm border ${
+              isNight
+                ? "bg-purple-900/80 border-purple-500/50 text-purple-100"
+                : "bg-blue-900/80 border-blue-500/50 text-blue-100"
+            }`}
+          >
+            <span className="text-sm font-medium capitalize">
+              {roomData.stage}
+            </span>
+          </div>
+        </div>
+
+        {/* Players count indicator */}
+        <div className="absolute top-4 right-4 z-10">
+          <div className="px-3 py-2 rounded-lg bg-black/50 backdrop-blur-sm border border-white/20 text-white">
+            <div className="flex items-center gap-2 text-sm">
+              <FaUsers className="w-4 h-4" />
+              <span>
+                {alivePlayers.length} / {players.length} Alive
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Players */}
+        {players.map((player) => {
+          const position = positions[player.id] || { x: 50, y: 50 };
+          const isCurrentPlayer = player.id === currentPlayerId;
+
+          return (
+            <motion.div
+              key={player.id}
+              className="absolute z-20"
+              animate={{
+                left: `${position.x}%`,
+                top: `${position.y}%`,
+                opacity: player.is_alive ? 1 : 0.4,
+              }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+            >
+              <div
+                className="relative group"
+                style={{ transform: "translate(-50%, -50%)" }}
+              >
+                {/* Player avatar */}
+                <div
+                  className={`relative w-16 h-16 lg:w-20 lg:h-20 rounded-full overflow-hidden border-4 transition-all duration-300 ${
+                    isCurrentPlayer
+                      ? "border-yellow-400 shadow-lg shadow-yellow-400/50"
+                      : player.is_alive
+                      ? "border-white/80 hover:border-white"
+                      : "border-red-500/50"
+                  }`}
+                >
+                  <img
+                    src={player.profile}
+                    alt={player.name}
+                    className="w-full h-full object-cover"
+                  />
+
+                  {/* Death overlay */}
+                  {!player.is_alive && (
+                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                      <GiDeathSkull className="text-red-400 text-3xl" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Player name */}
+                <div className="absolute -bottom-7 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                  <span
+                    className={`text-xs lg:text-sm font-medium px-2 py-1 rounded-md backdrop-blur-sm ${
+                      isCurrentPlayer
+                        ? "bg-yellow-500/90 text-yellow-900"
+                        : "bg-black/70 text-white"
+                    }`}
+                  >
+                    {player.name}
+                  </span>
+                </div>
+
+                {/* Action indicators */}
+                {player.is_action_done && player.is_alive && (
+                  <div
+                    className="absolute -top-2 -right-2 w-5 h-5 bg-green-500 rounded-full border-2 border-slate-800 animate-pulse"
+                    title="Action Taken"
+                  />
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
+
+        {/* Center game info */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="text-center">
+            <div
+              className={`inline-flex items-center gap-3 px-6 py-3 rounded-xl backdrop-blur-md border ${
+                isNight
+                  ? "bg-purple-900/40 border-purple-500/30 text-purple-100"
+                  : "bg-blue-900/40 border-blue-500/30 text-blue-100"
+              }`}
+            >
+              {isNight ? (
+                <GiWolfHowl className="text-2xl" />
+              ) : (
+                <FaGamepad className="text-2xl" />
+              )}
+              <div>
+                <div className="text-lg font-bold">Round {roomData.round}</div>
+                <div className="text-sm opacity-80">
+                  {isNight ? "Night Phase" : "Day Phase"}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Enhanced Role Reveal Modal ---
 const RoleRevealModal = ({ role, onClose }) => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
-    className="fixed inset-0 bg-slate-900/70 backdrop-blur-md z-50 flex items-center justify-center"
+    className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
   >
     <motion.div
-      initial={{ scale: 0.7, y: 50 }}
+      initial={{ scale: 0.8, y: 50 }}
       animate={{ scale: 1, y: 0 }}
-      className="relative bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl shadow-2xl border border-slate-700 text-center max-w-sm"
+      className="relative bg-gradient-to-br from-slate-800 to-slate-900 p-6 lg:p-8 rounded-2xl shadow-2xl border border-slate-700 text-center max-w-sm w-full mx-4"
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 text-slate-400 hover:text-white"
+        className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-1"
       >
         <FaTimes size={20} />
       </button>
-      <h2 className="text-lg font-semibold text-slate-400 mb-2">
+
+      <div className="mb-4">
+        {role === "wolf" && (
+          <GiWolfHowl className="text-red-400 text-7xl mx-auto" />
+        )}
+        {role === "seer" && (
+          <div className="text-blue-400 text-7xl mx-auto">👁️</div>
+        )}
+        {role === "doctor" && (
+          <GiHeartShield className="text-green-400 text-7xl mx-auto" />
+        )}
+        {role === "villager" && (
+          <div className="text-yellow-400 text-7xl mx-auto">👨‍🌾</div>
+        )}
+      </div>
+
+      <h2 className="text-lg font-semibold text-slate-400 mb-1">
         You are the...
       </h2>
-      <h1 className="text-4xl font-bold text-purple-400 capitalize mb-6">
+      <h1 className="text-3xl lg:text-4xl font-bold text-purple-400 capitalize mb-4">
         {role}
       </h1>
-      <p className="text-slate-300 mb-6">
-        {role === "wolf" && "Your goal is to eliminate all the villagers."}
+
+      <p className="text-slate-300 text-sm lg:text-base mb-6 leading-relaxed">
+        {role === "wolf" &&
+          "Your goal is to eliminate all the villagers without being caught."}
         {role === "seer" &&
           "Each night, you can discover one player's true identity."}
         {role === "doctor" &&
@@ -72,13 +297,14 @@ const RoleRevealModal = ({ role, onClose }) => (
         {role === "villager" &&
           "Your goal is to find and eliminate the wolf among you."}
       </p>
+
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onClose}
-        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg"
+        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition-colors"
       >
-        Got it
+        Got it!
       </motion.button>
     </motion.div>
   </motion.div>
@@ -96,12 +322,15 @@ export default function Game({ params }) {
   const [winner, setWinner] = useState(null);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [nightResult, setNightResult] = useState(null);
-  const [dayResult, setDayResult] = useState(null); // For voting results
+  const [dayResult, setDayResult] = useState(null);
 
   const hasShownRoleModal = useRef(false);
   const prevStageRef = useRef();
   const playersRef = useRef(players);
-  const prevPlayersRef = useRef(players); // To compare changes
+  const prevPlayersRef = useRef(players);
+
+  // ✅ NEW STATE: Manages which view ('game', 'players', or 'chat') is active on mobile
+  const [mobileView, setMobileView] = useState("game");
 
   // --- Side Effects to keep refs updated ---
   useEffect(() => {
@@ -194,7 +423,7 @@ export default function Game({ params }) {
         }
       )
       .subscribe();
-      
+
     const roomSubscription = supabase
       .channel(`game-room-${roomData.id}`)
       .on(
@@ -257,7 +486,6 @@ export default function Game({ params }) {
       const randomTarget =
         potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
       if (roomData.stage === "day") {
-        // ✅ FIX: Pass the room ID to the voting function as it is required.
         await voting(bot, randomTarget, roomData.id);
         await messaging(bot, roomData.id, playersRef.current, randomTarget);
       } else if (roomData.stage === "night") {
@@ -272,8 +500,7 @@ export default function Game({ params }) {
             currentTargets[Math.floor(Math.random() * currentTargets.length)];
           if (bot.role === "wolf") await kill(bot, finalTarget, roomData.id);
           else if (bot.role === "seer") await seePlayer(bot, finalTarget);
-          else if (bot.role === "doctor")
-            await savePlayer(bot, finalTarget);
+          else if (bot.role === "doctor") await savePlayer(bot, finalTarget);
         }, Math.floor(Math.random() * 7000) + 1000);
       }
     });
@@ -291,13 +518,16 @@ export default function Game({ params }) {
       hasShownRoleModal.current = true;
     }
 
-    // This block now handles the game turn logic.
     if (roomData.stage !== prevStageRef.current) {
-      if (prevStageRef.current === 'night' && roomData.stage === 'day') {
-        const previouslyAlive = prevPlayersRef.current.filter(p => p.is_alive);
-        const nowAlive = playersRef.current.filter(p => p.is_alive);
-        const killedPlayer = previouslyAlive.find(p => !nowAlive.some(ap => ap.id === p.id));
-        const savedPlayer = playersRef.current.find(p => p.is_saved);
+      if (prevStageRef.current === "night" && roomData.stage === "day") {
+        const previouslyAlive = prevPlayersRef.current.filter(
+          (p) => p.is_alive
+        );
+        const nowAlive = playersRef.current.filter((p) => p.is_alive);
+        const killedPlayer = previouslyAlive.find(
+          (p) => !nowAlive.some((ap) => ap.id === p.id)
+        );
+        const savedPlayer = playersRef.current.find((p) => p.is_saved);
 
         if (killedPlayer && savedPlayer && killedPlayer.id === savedPlayer.id) {
           setNightResult({ saved: savedPlayer.name });
@@ -308,42 +538,51 @@ export default function Game({ params }) {
         }
       }
 
-      if (prevStageRef.current === 'day' && roomData.stage === 'night') {
+      if (prevStageRef.current === "day" && roomData.stage === "night") {
         const votes = {};
-        prevPlayersRef.current.forEach(p => {
-            if (p.voted_to) {
-                votes[p.voted_to] = (votes[p.voted_to] || 0) + 1;
-            }
+        prevPlayersRef.current.forEach((p) => {
+          if (p.voted_to) {
+            votes[p.voted_to] = (votes[p.voted_to] || 0) + 1;
+          }
         });
-        
+
         let maxVotes = 0;
         let votedOutId = null;
         for (const playerId in votes) {
-            if (votes[playerId] > maxVotes) {
-                maxVotes = votes[playerId];
-                votedOutId = playerId;
-            }
+          if (votes[playerId] > maxVotes) {
+            maxVotes = votes[playerId];
+            votedOutId = playerId;
+          }
         }
 
-        const votedOutPlayer = prevPlayersRef.current.find(p => p.id === votedOutId);
+        const votedOutPlayer = prevPlayersRef.current.find(
+          (p) => p.id === parseInt(votedOutId)
+        );
         if (votedOutPlayer) {
-            supabase.from("players").update({ is_alive: false }).eq("id", votedOutPlayer.id).then();
-            setDayResult({ eliminated: votedOutPlayer.name });
+          supabase
+            .from("players")
+            .update({ is_alive: false })
+            .eq("id", votedOutPlayer.id)
+            .then();
+          setDayResult({ eliminated: votedOutPlayer.name });
         } else {
-            setDayResult({ noOneEliminated: true });
+          setDayResult({ noOneEliminated: true });
         }
       }
 
       if (currentPlayer?.player_id === roomData.host_id) {
         const handleNewTurn = async () => {
-          if (roomData.stage === 'night') {
-            await supabase.from('rooms').update({ round: roomData.round + 1 }).eq('id', roomData.id);
+          if (roomData.stage === "night") {
+            await supabase
+              .from("rooms")
+              .update({ round: roomData.round + 1 })
+              .eq("id", roomData.id);
           }
           const updates = playersRef.current.map((p) => ({
             id: p.id,
             is_action_done: false,
-            is_saved: false, // Reset saved status each turn
-            voted_to: null, // Reset votes
+            is_saved: false,
+            voted_to: null,
           }));
           await supabase.from("players").upsert(updates);
           runBotsActions();
@@ -353,7 +592,6 @@ export default function Game({ params }) {
     }
     prevStageRef.current = roomData.stage;
 
-    // This block handles winner checking.
     const isGameActive = roomData.stage === "day" || roomData.stage === "night";
     const rolesAreSet = players.every((p) => p.role !== null);
 
@@ -366,12 +604,32 @@ export default function Game({ params }) {
 
       if (alivePlayers.length > 0 && roomData.stage !== "ended") {
         if (aliveWolves.length === 0) {
-          setWinner({ team: "Villagers", name: "The Villagers", role: "villager", players: alivePlayers, enemy: allWolves });
-          supabase.from("rooms").update({ stage: "ended" }).eq("id", roomData.id).then();
+          setWinner({
+            team: "Villagers",
+            name: "The Villagers",
+            role: "villager",
+            players: alivePlayers,
+            enemy: allWolves,
+          });
+          supabase
+            .from("rooms")
+            .update({ stage: "ended" })
+            .eq("id", roomData.id)
+            .then();
         } else if (aliveNonWolves.length === 0) {
           const wolfNames = aliveWolves.map((w) => w.name).join(", ");
-          setWinner({ team: "Wolves", name: wolfNames, role: "wolf", players: aliveWolves, enemy: allNonWolves });
-          supabase.from("rooms").update({ stage: "ended" }).eq("id", roomData.id).then();
+          setWinner({
+            team: "Wolves",
+            name: wolfNames,
+            role: "wolf",
+            players: aliveWolves,
+            enemy: allNonWolves,
+          });
+          supabase
+            .from("rooms")
+            .update({ stage: "ended" })
+            .eq("id", roomData.id)
+            .then();
         }
       }
     }
@@ -402,43 +660,43 @@ export default function Game({ params }) {
     setRoomData((prev) => ({ ...prev, roles_assigned: true, stage: "night" }));
   };
 
-  // --- Render Logic ---
+  // --- Loading State ---
   if (!roomData || !isLoaded || !players.length) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-slate-900">
-        Loading Game...
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-500 mb-4"></div>
+        <p className="text-lg font-semibold">Loading Game...</p>
+        <p className="text-slate-400">Please wait a moment.</p>
       </div>
     );
   }
 
+  // --- Role Assignment Screen ---
   if (!roomData.roles_assigned) {
-    // Role Assignment Screen
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg z-50 flex items-center justify-center"
-      >
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
         <motion.div
           initial={{ scale: 0.8, y: 20 }}
           animate={{ scale: 1, y: 0 }}
-          className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-2xl shadow-2xl border border-slate-700/50 max-w-md mx-4 text-center"
+          className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 lg:p-8 rounded-2xl shadow-2xl border border-slate-700/50 max-w-md w-full text-center"
         >
           {user?.id === roomData.host_id ? (
             <>
               <GiWolfHowl className="text-purple-400 text-6xl mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-slate-200 mb-2">
+              <h3 className="text-xl lg:text-2xl font-bold text-slate-200 mb-2">
                 Ready to Assign Roles?
               </h3>
-              <p className="text-slate-400 mb-4">
-                Distribute roles to all players to begin.
+              <p className="text-slate-400 mb-6 text-sm lg:text-base">
+                Distribute roles to all players to begin the game.
               </p>
-              <AnimatedTooltipPeople people={players} />
+              <div className="mb-6">
+                <AnimatedTooltipPeople people={players} />
+              </div>
               <motion.button
                 onClick={ApplyingRoles}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="w-full mt-4 bg-purple-600 text-white font-bold py-3 px-6 rounded-xl"
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-colors"
               >
                 Apply Roles & Start Game
               </motion.button>
@@ -446,119 +704,146 @@ export default function Game({ params }) {
           ) : (
             <>
               <FaHourglass className="text-amber-400 text-5xl mx-auto mb-4 animate-spin" />
-              <h3 className="text-2xl font-bold text-slate-200 mb-3">
+              <h3 className="text-xl lg:text-2xl font-bold text-slate-200 mb-3">
                 Please Wait
               </h3>
-              <p className="text-slate-400 text-lg">
+              <p className="text-slate-400 text-base lg:text-lg">
                 The host is assigning roles...
               </p>
             </>
           )}
         </motion.div>
-      </motion.div>
+      </div>
     );
   }
 
+  // --- Result Modals ---
+  const ResultModal = ({ title, children, onClose }) => (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.8, y: 50 }}
+        animate={{ scale: 1, y: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-slate-800 p-6 lg:p-8 rounded-xl shadow-2xl text-center border border-slate-700 max-w-sm w-full"
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors p-1"
+        >
+          <FaTimes size={20} />
+        </button>
+        <h2 className="text-xl lg:text-2xl font-bold text-slate-200 mb-6">
+          {title}
+        </h2>
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+
   // --- Main Game UI ---
   return (
-    <>
-      <Toaster />
+    <div className="min-h-screen z-30 bg-slate-900 text-white flex flex-col">
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "#1f2937", // slate-800
+            color: "#fff",
+            borderRadius: "8px",
+            border: "1px solid #334155", // slate-700
+          },
+        }}
+      />
+
+      {/* Role Modal */}
       {isRoleModalOpen && currentPlayer?.role && (
         <RoleRevealModal
           role={currentPlayer.role}
           onClose={() => setIsRoleModalOpen(false)}
         />
       )}
+
+      {/* Night Result Modal */}
       {nightResult && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4"
-          onClick={() => setNightResult(null)}
+        <ResultModal
+          title="The Night Is Over..."
+          onClose={() => setNightResult(null)}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative bg-slate-800 p-8 rounded-lg shadow-lg text-center border border-slate-700"
-          >
-            <button
-              onClick={() => setNightResult(null)}
-              className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors"
-            >
-              <FaTimes size={22} />
-            </button>
-            <h2 className="text-2xl font-bold text-slate-200 mb-4">
-              The Night Is Over...
-            </h2>
-            {nightResult.killed ? (
-              <div className="flex items-center justify-center gap-4 text-red-400">
-                <GiDeathSkull size={40} />
-                <p className="text-xl">{nightResult.killed} was killed.</p>
-              </div>
-            ) : nightResult.saved ? (
-              <div className="flex items-center justify-center gap-4 text-green-400">
-                <GiHeartShield size={40} />
-                <p className="text-xl">
-                  {nightResult.saved} was attacked, but the Doctor saved them!
-                </p>
-              </div>
-            ) : (
-              <p className="text-xl text-slate-300">
-                The night was quiet. No one was attacked.
+          {nightResult.killed ? (
+            <div className="flex flex-col items-center justify-center gap-4 text-red-400">
+              <GiDeathSkull size={50} />
+              <p className="text-xl font-semibold">
+                {nightResult.killed} was killed.
               </p>
-            )}
-          </div>
-        </motion.div>
+            </div>
+          ) : nightResult.saved ? (
+            <div className="flex flex-col items-center justify-center gap-4 text-green-400">
+              <GiHeartShield size={50} />
+              <p className="text-xl font-semibold">
+                {nightResult.saved} was attacked, but saved!
+              </p>
+            </div>
+          ) : (
+            <p className="text-xl text-slate-300">
+              The night was quiet. No one was attacked.
+            </p>
+          )}
+        </ResultModal>
       )}
+
+      {/* Day Result Modal */}
       {dayResult && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4"
-          onClick={() => setDayResult(null)}
+        <ResultModal
+          title="The Village Has Spoken..."
+          onClose={() => setDayResult(null)}
         >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative bg-slate-800 p-8 rounded-lg shadow-lg text-center border border-slate-700"
-          >
-            <button
-              onClick={() => setDayResult(null)}
-              className="absolute top-3 right-3 text-slate-500 hover:text-white transition-colors"
-            >
-              <FaTimes size={22} />
-            </button>
-            <h2 className="text-2xl font-bold text-slate-200 mb-4">
-              The Village Has Spoken...
-            </h2>
-            {dayResult.eliminated ? (
-              <div className="flex items-center justify-center gap-4 text-amber-400">
-                <FaGavel size={35} />
-                <p className="text-xl">{dayResult.eliminated} has been voted out.</p>
-              </div>
-            ) : (
-              <p className="text-xl text-slate-300">
-                The vote was tied. No one was eliminated.
+          {dayResult.eliminated ? (
+            <div className="flex flex-col items-center justify-center gap-4 text-amber-400">
+              <FaGavel size={45} />
+              <p className="text-xl font-semibold">
+                {dayResult.eliminated} has been voted out.
               </p>
-            )}
-          </div>
-        </motion.div>
+            </div>
+          ) : (
+            <p className="text-xl text-slate-300">
+              The vote was tied. No one was eliminated.
+            </p>
+          )}
+        </ResultModal>
       )}
+
       <GameNavbar
         roomData={roomData}
         uid={uid}
         currentPlayerId={currentPlayer?.player_id}
         players={players}
       />
-      <div className="flex h-auto pb-30 min-h-[90%] w-full justify-between flex-col md:flex-row gap-4">
-        <SidePlayers players={players} />
-        <GameBox
-          roomData={roomData}
-          players={players}
-          currentPlayerId={currentPlayer?.id}
-        />
-        <div className="chat">
-          {roomData.stage === "day" && currentPlayer && (
+
+      <main className="flex-grow w-full flex relative overflow-hidden">
+        {/* Left Side: Players List (Visible on larger screens) */}
+        <div className="w-full order-2 lg:order-1 lg:w-64 xl:w-72 flex-shrink-0">
+          <SidePlayers players={players} />
+        </div>
+
+        {/* Center: Game Board */}
+        <div className="flex-grow min-w-0 order-1 lg:order-2 h-[50vh] lg:h-auto">
+          <EnhancedGameBox
+            roomData={roomData}
+            players={players}
+            currentPlayerId={currentPlayer?.id}
+          />
+        </div>
+
+        {/* Right Side: Chat */}
+        <div className="w-full order-3 lg:w-72 xl:w-80 flex-shrink-0 flex flex-col h-64 lg:h-auto">
+          {roomData.stage === "day" && currentPlayer?.is_alive ? (
             <PlayersChat
               roomID={roomData.id}
               playerID={currentPlayer?.id}
@@ -566,15 +851,26 @@ export default function Game({ params }) {
               is_alive={currentPlayer?.is_alive}
               player_role={currentPlayer?.role}
             />
+          ) : (
+            <div className="h-full w-full bg-slate-800/50 rounded-lg flex items-center justify-center text-slate-400 p-4 text-center">
+              <p className="text-sm">
+                Chat is only available for alive players during the day.
+              </p>
+            </div>
           )}
         </div>
-      </div>
-      <GameActionsBar
+      </main>
+
+       {/* ✅ UPDATED: The action bar now gets the state and setter for the mobile view */}
+       <GameActionsBar
         roomId={roomData.id}
         roomInfo={roomData}
         playerInfo={currentPlayer}
         players={players}
+        mobileView={mobileView}
+        setMobileView={setMobileView}
       />
+
       {winner && (
         <GameWinner
           winner={winner}
@@ -583,6 +879,6 @@ export default function Game({ params }) {
           currentPlayerRole={currentPlayer?.role}
         />
       )}
-    </>
+    </div>
   );
 }
