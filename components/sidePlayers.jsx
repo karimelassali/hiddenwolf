@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { FaSkull, FaCheckCircle, FaTimesCircle, FaCrown } from 'react-icons/fa';
 import { FaUsers } from 'react-icons/fa';
 // ✅ UPDATED: Added `currentPlayerId` and `hostId` as props
