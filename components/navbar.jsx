@@ -8,9 +8,11 @@ import { useEffect } from "react";
 
 export default function Navbar() {
 
-  useEffect(()=>{
-    BackgroundSound()
-  },[])
+  useEffect(() => {
+    if (window.innerWidth > 768) {
+      BackgroundSound()
+    }
+  }, [])
 
   return (
     <header className="flex justify-between items-center overflow-hidden p-5 gap-4 h-16"> 

@@ -77,11 +77,8 @@ export default function Home() {
 
   // Background rotation every 9 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
       setCurrentBgIndex((prevIndex) => (prevIndex + 1) % backgrounds.length);
-    }, 9000);
 
-    return () => clearInterval(interval);
   }, []);
 
   const handleCreateRoom = () => {
@@ -204,13 +201,13 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
           <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 -sm"
             onClick={closeJoinModal}
           />
           
           {/* Modal */}
           <div className="relative z-10 w-full max-w-md">
-            <div className="bg-gradient-to-br from-slate-900/95 via-gray-900/90 to-black/95 backdrop-blur-xl rounded-2xl border border-gray-600/30 shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-br from-slate-900/95 via-gray-900/90 to-black/95 -xl rounded-2xl border border-gray-600/30 shadow-2xl overflow-hidden">
               {/* Animated border */}
               <div className="absolute inset-0 bg-gradient-to-r from-gray-600/20 via-slate-600/20 to-gray-700/20 rounded-2xl blur-xl animate-pulse" />
               
@@ -291,21 +288,7 @@ export default function Home() {
 
       <Toaster />
 
-      {/* Mysterious floating elements with enhanced colors */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-gray-500/20 rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 4}s`,
-              animationDuration: `${4 + Math.random() * 3}s`,
-            }}
-          />
-        ))}
-      </div>
+     
 
       {/* Gradient overlay for better contrast */}
       <div className="absolute inset-0 bg-gradient-to-br from-gray-950/20 via-slate-950/30 to-black/40" />
@@ -313,7 +296,7 @@ export default function Home() {
       {/* Main content - centered */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
         {/* Profile Card - Center Square */}
-        <div className="relative z-10 flex flex-col items-center justify-center gap-6 p-8 backdrop-blur-xl bg-gradient-to-br from-slate-900/60 via-gray-900/40 to-black/50 rounded-3xl border border-gray-600/20 shadow-2xl max-w-sm w-full mb-8">
+        <div className="relative z-10 flex flex-col bg-slate-800 items-center justify-center gap-6 p-8 -xl bg-gradient-to-br from-slate-900/60 via-gray-900/40 to-black/50 rounded-3xl border border-gray-600/20 shadow-2xl max-w-sm w-full mb-8">
           <ShineBorder shineColor={["#64748B", "#475569", "#374151"]} />
 
           {/* Avatar */}
@@ -396,7 +379,7 @@ export default function Home() {
           <Button
             variant={"dark"}
             onClick={handleJoinRoom}
-            className="w-full bg-slate-800/40 hover:bg-slate-700/50 text-indigo-200 font-medium py-3 px-6 rounded-xl border border-indigo-500/20 transition-all duration-300 hover:border-indigo-400/40 backdrop-blur-sm hover:shadow-lg hover:shadow-indigo-500/10"
+            className="w-full bg-slate-800/40 hover:bg-slate-700/50 text-indigo-200 font-medium py-3 px-6 rounded-xl border border-indigo-500/20 transition-all duration-300 hover:border-indigo-400/40 -sm hover:shadow-lg hover:shadow-indigo-500/10"
           >
             <span className="flex items-center justify-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -412,7 +395,7 @@ export default function Home() {
    {/* Enhanced Bottom navigation with mysterious premium feel */}
    <div className="fixed bottom-0 left-0 w-full z-10">
         {/* Gradient backdrop with enhanced blur */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-slate-900/80 to-transparent backdrop-blur-2xl" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-slate-900/80 to-transparent -2xl" />
         
         {/* Top border glow effect */}
         <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-500/60 to-transparent" />
@@ -480,7 +463,7 @@ export default function Home() {
                 key={index}
                 variant={"dark"}
                 onClick={() => router.push(item.route)}
-                className={`group relative overflow-hidden flex-1 min-w-[70px] bg-gradient-to-b from-slate-800/30 to-slate-900/50 hover:from-slate-700/40 hover:to-slate-800/60 text-slate-300 hover:text-white font-medium p-3 rounded-2xl border border-slate-600/30 hover:border-slate-500/50 transition-all duration-500 hover:scale-110 hover:-translate-y-2 backdrop-blur-xl shadow-lg ${item.hoverShadow}`}
+                className={`group relative overflow-hidden flex-1 min-w-[70px] bg-gradient-to-b from-slate-800/30 to-slate-900/50 hover:from-slate-700/40 hover:to-slate-800/60 text-slate-300 hover:text-white font-medium p-3 rounded-2xl border border-slate-600/30 hover:border-slate-500/50 transition-all duration-500 hover:scale-110 hover:-translate-y-2 -xl shadow-lg ${item.hoverShadow}`}
               >
                 {/* Hover background gradient */}
                 <div className={`absolute inset-0 bg-gradient-to-b ${item.activeColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl`} />
