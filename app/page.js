@@ -30,8 +30,8 @@ export default function Home() {
 
 
   const backgrounds = [
-    'url("/assets/images/background.png")',
-    'url("/assets/images/background1.png")',
+    // 'url("/assets/images/background.png")',
+    'url("/assets/images/background1.avif")',
   ];
 
   const fullId = uuidv4();
