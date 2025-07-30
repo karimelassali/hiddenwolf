@@ -30,7 +30,7 @@ import { PiCoins } from "react-icons/pi";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CustomAudioPlayer } from "@/components/audioPlayer";
-import {NumberCounting} from "@/components/magicui/number-ticker";
+import { NumberCounting } from "@/components/magicui/number-ticker";
 import { ClickSound } from "@/utils/sounds";
 
 export default function Page() {
@@ -41,7 +41,7 @@ export default function Page() {
   const [playingAudio, setPlayingAudio] = useState(null);
   const { isLoaded, user } = useUser();
   const [editingUsername, setEditingUsername] = useState(false);
-  const [newUsername, setNewUsername] = useState('');
+  const [newUsername, setNewUsername] = useState("");
   const router = useRouter();
 
   const fetchUserState = async (playerId) => {
@@ -136,9 +136,6 @@ export default function Page() {
     }
   };
 
-
-
-
   const filteredInventory =
     selectedCategory === "All"
       ? playerInventory
@@ -180,7 +177,10 @@ export default function Page() {
     if (error) {
       console.log(error);
     }
-    setPlayerState((prevState) => ({ ...prevState, avatar: item.store.item_url }));
+    setPlayerState((prevState) => ({
+      ...prevState,
+      avatar: item.store.item_url,
+    }));
   };
 
   const changePlayerUserName = async (id, newUsername) => {
@@ -281,7 +281,6 @@ export default function Page() {
                   ) : (
                     <div className="w-full h-full bg-gray-900 rounded-full flex items-center justify-center text-4xl font-bold text-gray-300">
                       {user.firstName?.charAt(0) || "P"}
-                      
                     </div>
                   )}
                 </div>
@@ -295,95 +294,131 @@ export default function Page() {
 
             {/* User Info */}
             <div className="flex-1 flex flex-col items-center lg:items-start">
-  <motion.div
-    initial={{ x: -30, opacity: 0 }}
-    animate={{ x: 0, opacity: 1 }}
-    transition={{ delay: 0.2 }}
-    className="flex items-center gap-3 mb-3"
-  >
-    <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-300 via-slate-300 to-gray-400 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 hover:from-gray-200 hover:via-slate-200 hover:to-gray-300">
-      {user.username || `${user.firstName} ${user.lastName}`}-
-      {playerState.username}
-    </h1>
-    
-    {user.username && (
-      <motion.button
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
-        onClick={() => setEditingUsername(true)}
-        className="group relative p-2 rounded-lg text-gray-400 hover:text-gray-300 hover:bg-gray-800/30 backdrop-blur-sm border border-transparent hover:border-gray-600/40 transition-all duration-300"
-        title="Edit username (100 coins)"
-      >
-        <svg className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      </motion.button>
-    )}
-  </motion.div>
+              <motion.div
+                initial={{ x: -30, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="flex items-center gap-3 mb-3"
+              >
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-300 via-slate-300 to-gray-400 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 hover:from-gray-200 hover:via-slate-200 hover:to-gray-300">
+                  {user.username || `${user.firstName} ${user.lastName}`}-
+                  {playerState.username}
+                </h1>
 
-  {!playerState.username && (
-    <motion.button
-      initial={{ x: -30, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ delay: 0.3 }}
-      onClick={() => setEditingUsername(true)}
-      className="group relative text-gray-400 text-lg mb-3 hover:text-gray-300 transition-all duration-300 px-4 py-2 rounded-lg hover:bg-gray-800/30 backdrop-blur-sm border border-transparent hover:border-gray-600/40"
-    >
-      <span className="flex items-center gap-2">
-        Set Username
-        <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      </span>
-    </motion.button>
-  )}
+                {user.username && (
+                  <motion.button
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
+                    onClick={() => setEditingUsername(true)}
+                    className="group relative p-2 rounded-lg text-gray-400 hover:text-gray-300 hover:bg-gray-800/30 backdrop-blur-sm border border-transparent hover:border-gray-600/40 transition-all duration-300"
+                    title="Edit username (100 coins)"
+                  >
+                    <svg
+                      className="w-5 h-5 group-hover:rotate-12 transition-transform duration-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </motion.button>
+                )}
+              </motion.div>
 
-  {editingUsername && (
-    <motion.div
-      initial={{ x: -30, opacity: 0, scale: 0.95 }}
-      animate={{ x: 0, opacity: 1, scale: 1 }}
-      transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
-      className="flex flex-col items-center lg:items-start gap-3 w-full max-w-xs"
-    >
-      {playerState.username && (
-        <div className="flex items-center gap-2 text-amber-400 text-sm font-medium">
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
-          </svg>
-          <span>Costs 100 coins to change username</span>
-        </div>
-      )}
-      
-      <div className="relative w-full">
-        <input
-          type="text"
-          value={newUsername}
-          onChange={(e) => setNewUsername(e.target.value)}
-          placeholder={playerState.username ? "Enter new username..." : "Choose your username..."}
-          className="w-full p-3 rounded-xl border border-gray-700/50 bg-gray-900/40 backdrop-blur-sm text-gray-200 placeholder-gray-500 focus:border-gray-500/70 focus:ring-2 focus:ring-gray-600/20 focus:outline-none transition-all duration-300 hover:bg-gray-800/50"
-        />
-        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gray-700/10 via-slate-600/10 to-gray-700/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
-      </div>
-      
-      <div className="flex gap-2 w-full">
-        <button
-          onClick={async () => changePlayerUserName(user.id, newUsername)}
-          className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 text-white p-3 rounded-xl hover:from-gray-600 hover:to-gray-500 transition-all duration-300 font-medium shadow-lg hover:shadow-gray-700/25 hover:scale-105 active:scale-95"
-        >
-          {playerState.username ? 'Change Username' : 'Set Username'}
-        </button>
-        
-        <button
-          onClick={() => setEditingUsername(false)}
-          className="px-4 py-3 rounded-xl border border-gray-700/50 text-gray-400 hover:text-gray-300 hover:bg-gray-800/40 hover:border-gray-600/60 transition-all duration-300"
-        >
-          Cancel
-        </button>
-      </div>
-    </motion.div>
-  )}
+              {!playerState.username && (
+                <motion.button
+                  initial={{ x: -30, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  onClick={() => setEditingUsername(true)}
+                  className="group relative text-gray-400 text-lg mb-3 hover:text-gray-300 transition-all duration-300 px-4 py-2 rounded-lg hover:bg-gray-800/30 backdrop-blur-sm border border-transparent hover:border-gray-600/40"
+                >
+                  <span className="flex items-center gap-2">
+                    Set Username
+                    <svg
+                      className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </span>
+                </motion.button>
+              )}
+
+              {editingUsername && (
+                <motion.div
+                  initial={{ x: -30, opacity: 0, scale: 0.95 }}
+                  animate={{ x: 0, opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
+                  className="flex flex-col items-center lg:items-start gap-3 w-full max-w-xs"
+                >
+                  {playerState.username && (
+                    <div className="flex items-center gap-2 text-amber-400 text-sm font-medium">
+                      <svg
+                        className="w-4 h-4"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                      <span>Costs 100 coins to change username</span>
+                    </div>
+                  )}
+
+                  <div className="relative w-full">
+                    <input
+                      type="text"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      placeholder={
+                        playerState.username
+                          ? "Enter new username..."
+                          : "Choose your username..."
+                      }
+                      className="w-full p-3 rounded-xl border border-gray-700/50 bg-gray-900/40 backdrop-blur-sm text-gray-200 placeholder-gray-500 focus:border-gray-500/70 focus:ring-2 focus:ring-gray-600/20 focus:outline-none transition-all duration-300 hover:bg-gray-800/50"
+                    />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gray-700/10 via-slate-600/10 to-gray-700/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+                  </div>
+
+                  <div className="flex gap-2 w-full">
+                    <button
+                      onClick={async () =>
+                        changePlayerUserName(user.id, newUsername)
+                      }
+                      className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 text-white p-3 rounded-xl hover:from-gray-600 hover:to-gray-500 transition-all duration-300 font-medium shadow-lg hover:shadow-gray-700/25 hover:scale-105 active:scale-95"
+                    >
+                      {playerState.username
+                        ? "Change Username"
+                        : "Set Username"}
+                    </button>
+
+                    <button
+                      onClick={() => setEditingUsername(false)}
+                      className="px-4 py-3 rounded-xl border border-gray-700/50 text-gray-400 hover:text-gray-300 hover:bg-gray-800/40 hover:border-gray-600/60 transition-all duration-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
             {/* Coins Display */}
@@ -397,7 +432,6 @@ export default function Page() {
                 <div className="flex items-center justify-center gap-2 text-3xl font-bold text-amber-500 mb-1">
                   <PiCoins size={32} />
                   <NumberCounting value={playerState?.coins || 0} />
-                  
                 </div>
                 {/* <p className="text-white-400 text-sm">Total Coins</p> */}
               </div>
@@ -593,11 +627,10 @@ export default function Page() {
                           <div className="relative h-48 mb-4 rounded-xl overflow-hidden">
                             {item.store?.category === "Sounds" ? (
                               <div className="w-full h-full bg-gray-800 flex flex-col items-center justify-center text-gray-400">
-                               <CustomAudioPlayer
-                               src  ={item.store?.item_url}
-                               itemName={item.store?.item}
-                               />
-                               
+                                <CustomAudioPlayer
+                                  src={item.store?.item_url}
+                                  itemName={item.store?.item}
+                                />
                               </div>
                             ) : (
                               <img
@@ -627,27 +660,26 @@ export default function Page() {
                               <span className="text-gray-500 text-sm capitalize">
                                 {item.store?.category}
                               </span>
-                              {item?.store?.category === "Avatars" && (
-                                
-                                  item?.store?.item_url === playerState?.avatar ? (
-                                    <motion.button
-                                    disabled='true'
-                                      whileTap={{ scale: 0.9 }}
-                                      onClick={() => equipAvatar(item)}
-                                      className="px-3 py-1 bg-slate-800 hover:bg-amber-700 text-amber-200 text-sm rounded-md transition-colors"
-                                    >
-                                      Equiped
-                                    </motion.button>
-                                  ):(
+                              {item?.store?.category === "Avatars" &&
+                                (item?.store?.item_url ===
+                                playerState?.avatar ? (
                                   <motion.button
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => equipAvatar(item)}
-                                  className="px-3 py-1 bg-amber-800 hover:bg-amber-700 text-amber-200 text-sm rounded-md transition-colors"
-                                >
-                                  Equip
-                                </motion.button>
-                                  )
-                              )}
+                                    disabled="true"
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => equipAvatar(item)}
+                                    className="px-3 py-1 bg-slate-800 hover:bg-amber-700 text-amber-200 text-sm rounded-md transition-colors"
+                                  >
+                                    Equiped
+                                  </motion.button>
+                                ) : (
+                                  <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => equipAvatar(item)}
+                                    className="px-3 py-1 bg-amber-800 hover:bg-amber-700 text-amber-200 text-sm rounded-md transition-colors"
+                                  >
+                                    Equip
+                                  </motion.button>
+                                ))}
                             </div>
 
                             <div className="text-gray-600 text-xs">

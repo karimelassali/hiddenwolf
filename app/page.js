@@ -463,7 +463,7 @@ export default function Home() {
                 key={index}
                 variant={"dark"}
                 onClick={() => router.push(item.route)}
-                className={`group relative overflow-hidden flex-1 min-w-[70px] bg-gradient-to-b from-slate-800/30 to-slate-900/50 hover:from-slate-700/40 hover:to-slate-800/60 text-slate-300 hover:text-white font-medium p-3 rounded-2xl border border-slate-600/30 hover:border-slate-500/50 transition-all duration-500 hover:scale-110 hover:-translate-y-2 -xl shadow-lg ${item.hoverShadow}`}
+                className={`group relative flex flex-col items-center overflow-hidden flex-1 min-w-[70px] bg-gradient-to-b from-slate-800/30 to-slate-900/50 hover:from-slate-700/40 hover:to-slate-800/60 text-slate-300 hover:text-white font-medium p-3 rounded-2xl border border-slate-600/30 hover:border-slate-500/50 transition-all duration-500 hover:scale-110 hover:-translate-y-2 -xl shadow-lg ${item.hoverShadow}`}
               >
                 {/* Hover background gradient */}
                 <div className={`absolute inset-0 bg-gradient-to-b ${item.activeColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl`} />
@@ -472,11 +472,11 @@ export default function Home() {
                 <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
                 
                 {/* Content with proper spacing */}
-                <span className="relative flex flex-col items-center justify-center gap-3 z-10 h-full min-h-[60px]">
+                <span className="relative flex  items-center justify-center gap-3 z-10 h-full min-h-[60px]">
                   <div className="group-hover:scale-125 transition-transform duration-300 flex items-center justify-center">
                     {item.icon}
                   </div>
-                  <span className="text-xs font-semibold tracking-wide group-hover:text-white transition-colors duration-300 text-center leading-tight">
+                  <span className="text-xs max-sm:hidden font-semibold tracking-wide group-hover:text-white transition-colors duration-300 text-center leading-tight">
                     {item.label}
                   </span>
                 </span>
