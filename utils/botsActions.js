@@ -3,11 +3,24 @@ import { supabase } from "@/lib/supabase";
 // --- Night Actions ---
 
 export async function kill(wolf, target, roomId) {
-  if (!wolf || !target || !roomId || wolf.role !== "wolf" || wolf.is_action_done) return;
-  
-  await supabase.from("players").update({ is_alive: false, dying_method: "wolf" }).eq("id", target.id);
+  if (
+    !wolf ||
+    !target ||
+    !roomId ||
+    wolf.role !== "wolf" ||
+    wolf.is_action_done
+  )
+    return;
+
+  await supabase
+    .from("players")
+    .update({ is_alive: false, dying_method: "wolf" })
+    .eq("id", target.id);
   await supabase.from("rooms").update({ wolf_killed: true }).eq("id", roomId);
-  await supabase.from("players").update({ is_action_done: true }).eq("id", wolf.id);
+  await supabase
+    .from("players")
+    .update({ is_action_done: true })
+    .eq("id", wolf.id);
 }
 
 // ✅ UPDATED: seePlayer now stores the role of the seen player in the new column.
@@ -23,18 +36,22 @@ export async function seePlayer(seer, target) {
 }
 
 export async function savePlayer(doctor, target) {
-  if (!doctor || !target || doctor.role !== "doctor" || doctor.is_action_done) return;
+  if (!doctor || !target || doctor.role !== "doctor" || doctor.is_action_done)
+    return;
 
   await supabase.from("players").update({ is_saved: true }).eq("id", target.id);
-  await supabase.from("players").update({ is_action_done: true }).eq("id", doctor.id);
+  await supabase
+    .from("players")
+    .update({ is_action_done: true })
+    .eq("id", doctor.id);
 }
-
 
 // --- Day Actions ---
 
 // ✅ UPDATED: The voting function now updates the `players` table, which is what your
 // Game component expects to correctly process votes and determine who is eliminated.
 export async function voting(voter, target) {
+  console.log('im ' + voter.name + 'voting for ' + target.name);
 
   await supabase
     .from("players")
@@ -49,7 +66,7 @@ export async function messaging(bot, roomId, allPlayers, targetOfVote) {
 
   const getMessage = () => {
     switch (bot.role) {
-      case 'wolf':
+      case "wolf":
         // The wolf tries to deflect blame onto the innocent player they voted for.
         const wolfMessages = [
           `I'm voting for ${targetOfVote.name}. They've been acting very suspicious.`,
@@ -58,31 +75,36 @@ export async function messaging(bot, roomId, allPlayers, targetOfVote) {
         ];
         return wolfMessages[Math.floor(Math.random() * wolfMessages.length)];
 
-      case 'seer':
+      case "seer":
         // The seer gives a cryptic hint based on their last vision from the 'last_seen_role' column.
-        if (bot.last_seen_role === 'wolf') {
+        if (bot.last_seen_role === "wolf") {
           return "My vision last night was dark... there is evil among us.";
-        } else if (bot.last_seen_role) { // Could be 'villager' or 'doctor'
+        } else if (bot.last_seen_role) {
+          // Could be 'villager' or 'doctor'
           return "I saw an ally last night. We must stay strong and united.";
         } else {
           return "The spirits are cloudy today. I must be careful.";
         }
 
-      case 'doctor':
+      case "doctor":
         const doctorMessages = [
           "I'm trying my best to protect everyone. We need to be careful with our votes.",
           "Let's think logically about who to vote for. Hasty decisions are dangerous.",
         ];
-        return doctorMessages[Math.floor(Math.random() * doctorMessages.length)];
+        return doctorMessages[
+          Math.floor(Math.random() * doctorMessages.length)
+        ];
 
-      case 'villager':
+      case "villager":
       default:
         const villagerMessages = [
           `I'm not sure, but I think ${targetOfVote.name} is suspicious.`,
           "This is so stressful! I don't know who to trust.",
           "I'll follow the group's vote for now, but we need more information.",
         ];
-        return villagerMessages[Math.floor(Math.random() * villagerMessages.length)];
+        return villagerMessages[
+          Math.floor(Math.random() * villagerMessages.length)
+        ];
     }
   };
 
@@ -97,4 +119,4 @@ export async function messaging(bot, roomId, allPlayers, targetOfVote) {
     is_alive: bot.is_alive,
     role: bot.role,
   });
-};
+}

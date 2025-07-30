@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-
-// --- Enhanced Game Box Component ---
-export default function GameBox ({ roomData, players, currentPlayerId }) {
+import React, { useEffect, useRef, useState } from "react";
+import { FaUsers } from "react-icons/fa";
+import {motion} from "framer-motion";
+import { GiWolfHowl, GiDeathSkull } from "react-icons/gi";
+import {FaGamepad} from "react-icons/fa";
+export default function GameBox({ roomData, players, currentPlayerId }) {
   const [positions, setPositions] = useState({});
   const containerRef = useRef(null);
 
   const dayBackground = "/assets/images/day.png";
   const nightBackground = "/assets/images/night.png";
 
+  // Initialize player positions in a circle
   useEffect(() => {
     if (players.length === 0) return;
     const initialPositions = {};
@@ -17,28 +19,50 @@ export default function GameBox ({ roomData, players, currentPlayerId }) {
 
     alivePlayers.forEach((player, index) => {
       const angle = (index / count) * 2 * Math.PI;
-      
-      // ✅ FIX: Changed the circle to an ellipse and moved it down.
-      const radiusX = 40; // Horizontal radius (makes it wide)
-      const radiusY = 12; // Vertical radius (makes it short, like a ground plane)
-      const centerY = 80; // Vertical center (80% from the top, moving it down)
-
+      const radius = Math.min(35, 10 + count * 2); // Radius adjusts with player count
       initialPositions[player.id] = {
-        x: 50 + radiusX * Math.cos(angle),
-        y: centerY + radiusY * Math.sin(angle),
+        x: 50 + radius * Math.cos(angle),
+        y: 50 + radius * Math.sin(angle),
       };
     });
-    
-    // Position dead players at the bottom, out of the way
-    players.filter((p) => !p.is_alive).forEach((player, index) => {
-      // Spreads dead players out at the very bottom
-      initialPositions[player.id] = { x: 15 + index * 15, y: 95 };
-    });
+    // Position dead players at the bottom
+    players
+      .filter((p) => !p.is_alive)
+      .forEach((player, index) => {
+        initialPositions[player.id] = { x: 20 + index * 15, y: 90 };
+      });
 
     setPositions(initialPositions);
-  }, [players.length, roomData.stage]);
+  }, [players.length, roomData.stage]); // Re-calculate on stage change to reset positions
 
-  // The rest of your EnhancedGameBox component remains the same...
+  // Handle random movement during night
+  useEffect(() => {
+    if (roomData.stage !== "night") return;
+
+    const interval = setInterval(() => {
+      setPositions((prevPositions) => {
+        const newPositions = { ...prevPositions };
+        players.forEach((player) => {
+          if (!player.is_alive) return;
+          const currentPos = prevPositions[player.id] || { x: 50, y: 50 };
+          newPositions[player.id] = {
+            x: Math.max(
+              10,
+              Math.min(90, currentPos.x + (Math.random() * 6 - 3))
+            ),
+            y: Math.max(
+              10,
+              Math.min(90, currentPos.y + (Math.random() * 6 - 3))
+            ),
+          };
+        });
+        return newPositions;
+      });
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [roomData.stage, players]);
+
   const isNight = roomData.stage === "night";
   const alivePlayers = players.filter((p) => p.is_alive);
 
@@ -51,11 +75,14 @@ export default function GameBox ({ roomData, players, currentPlayerId }) {
           backgroundImage: `url(${isNight ? nightBackground : dayBackground})`,
         }}
       >
+        {/* Overlay for better contrast */}
         <div
           className={`absolute inset-0 transition-colors duration-1000 ${
             isNight ? "bg-black/40" : "bg-blue-300/10"
           }`}
         />
+
+        {/* Stage indicator */}
         <div className="absolute top-4 left-4 z-10">
           <div
             className={`px-3 py-2 rounded-lg backdrop-blur-sm border ${
@@ -69,6 +96,8 @@ export default function GameBox ({ roomData, players, currentPlayerId }) {
             </span>
           </div>
         </div>
+
+        {/* Players count indicator */}
         <div className="absolute top-4 right-4 z-10">
           <div className="px-3 py-2 rounded-lg bg-black/50 backdrop-blur-sm border border-white/20 text-white">
             <div className="flex items-center gap-2 text-sm">
@@ -82,26 +111,26 @@ export default function GameBox ({ roomData, players, currentPlayerId }) {
 
         {/* Players */}
         {players.map((player) => {
-          const position = positions[player.id] || { x: 50, y: 80 };
+          const position = positions[player.id] || { x: 50, y: 50 };
           const isCurrentPlayer = player.id === currentPlayerId;
 
           return (
             <motion.div
               key={player.id}
               className="absolute z-20"
-              initial={{ opacity: 0, scale: 0.5 }}
               animate={{
                 left: `${position.x}%`,
                 top: `${position.y}%`,
                 opacity: player.is_alive ? 1 : 0.4,
-                scale: 1,
               }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} // A smoother "springy" animation
+              transition={{ duration: 1.5, ease: "easeInOut" }}
             >
               <div
                 className="relative group"
                 style={{ transform: "translate(-50%, -50%)" }}
               >
+                {/* Player avatar */}
+                {player.role}
                 <div
                   className={`relative w-16 h-16 lg:w-20 lg:h-20 rounded-full overflow-hidden border-4 transition-all duration-300 ${
                     isCurrentPlayer
@@ -116,12 +145,16 @@ export default function GameBox ({ roomData, players, currentPlayerId }) {
                     alt={player.name}
                     className="w-full h-full object-cover"
                   />
+
+                  {/* Death overlay */}
                   {!player.is_alive && (
                     <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
                       <GiDeathSkull className="text-red-400 text-3xl" />
                     </div>
                   )}
                 </div>
+
+                {/* Player name */}
                 <div className="absolute -bottom-7 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
                   <span
                     className={`text-xs lg:text-sm font-medium px-2 py-1 rounded-md backdrop-blur-sm ${
@@ -133,6 +166,8 @@ export default function GameBox ({ roomData, players, currentPlayerId }) {
                     {player.name}
                   </span>
                 </div>
+
+                {/* Action indicators */}
                 {player.is_action_done && player.is_alive && (
                   <div
                     className="absolute -top-2 -right-2 w-5 h-5 bg-green-500 rounded-full border-2 border-slate-800 animate-pulse"
@@ -144,6 +179,7 @@ export default function GameBox ({ roomData, players, currentPlayerId }) {
           );
         })}
 
+        {/* Center game info */}
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="text-center">
             <div

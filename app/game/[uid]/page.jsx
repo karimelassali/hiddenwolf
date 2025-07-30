@@ -17,12 +17,14 @@ import {
   FaSun,
   FaMoon,
 } from "react-icons/fa";
+
 import {
   GiWolfHowl,
   GiHeartShield,
   GiDeathSkull,
   GiTiedScroll,
 } from "react-icons/gi";
+
 import { supabase } from "@/lib/supabase";
 import {
   kill,
@@ -48,396 +50,17 @@ const GameWinner = dynamic(() => import("@/components/winnerModal"), {
   ssr: false,
 });
 
-// --- Enhanced Game Box Component ---
-const EnhancedGameBox = ({ roomData, players, currentPlayerId }) => {
-  const [positions, setPositions] = useState({});
-  const containerRef = useRef(null);
+const GameBox = dynamic(() => import("@/components/gameBox"), {
+  ssr: false,
+});
 
-  const dayBackground = "/assets/images/day.png";
-  const nightBackground = "/assets/images/night.png";
+const RoleRevealModal = dynamic(() => import("@/components/ui/rolesModal"), {
+  ssr: false,
+});
 
-  // Initialize player positions in a circle
-  useEffect(() => {
-    if (players.length === 0) return;
-    const initialPositions = {};
-    const alivePlayers = players.filter((p) => p.is_alive);
-    const count = alivePlayers.length;
-
-    alivePlayers.forEach((player, index) => {
-      const angle = (index / count) * 2 * Math.PI;
-      const radius = Math.min(35, 10 + count * 2); // Radius adjusts with player count
-      initialPositions[player.id] = {
-        x: 50 + radius * Math.cos(angle),
-        y: 50 + radius * Math.sin(angle),
-      };
-    });
-    // Position dead players at the bottom
-    players
-      .filter((p) => !p.is_alive)
-      .forEach((player, index) => {
-        initialPositions[player.id] = { x: 20 + index * 15, y: 90 };
-      });
-
-    setPositions(initialPositions);
-  }, [players.length, roomData.stage]); // Re-calculate on stage change to reset positions
-
-  // Handle random movement during night
-  useEffect(() => {
-    if (roomData.stage !== "night") return;
-
-    const interval = setInterval(() => {
-      setPositions((prevPositions) => {
-        const newPositions = { ...prevPositions };
-        players.forEach((player) => {
-          if (!player.is_alive) return;
-          const currentPos = prevPositions[player.id] || { x: 50, y: 50 };
-          newPositions[player.id] = {
-            x: Math.max(
-              10,
-              Math.min(90, currentPos.x + (Math.random() * 6 - 3))
-            ),
-            y: Math.max(
-              10,
-              Math.min(90, currentPos.y + (Math.random() * 6 - 3))
-            ),
-          };
-        });
-        return newPositions;
-      });
-    }, 2500);
-
-    return () => clearInterval(interval);
-  }, [roomData.stage, players]);
-
-  const isNight = roomData.stage === "night";
-  const alivePlayers = players.filter((p) => p.is_alive);
-
-  return (
-    <div className="flex-1 w-full h-full min-h-[400px] lg:min-h-0 relative">
-      <div
-        ref={containerRef}
-        className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-1000 bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${isNight ? nightBackground : dayBackground})`,
-        }}
-      >
-        {/* Overlay for better contrast */}
-        <div
-          className={`absolute inset-0 transition-colors duration-1000 ${
-            isNight ? "bg-black/40" : "bg-blue-300/10"
-          }`}
-        />
-
-        {/* Stage indicator */}
-        <div className="absolute top-4 left-4 z-10">
-          <div
-            className={`px-3 py-2 rounded-lg backdrop-blur-sm border ${
-              isNight
-                ? "bg-purple-900/80 border-purple-500/50 text-purple-100"
-                : "bg-blue-900/80 border-blue-500/50 text-blue-100"
-            }`}
-          >
-            <span className="text-sm font-medium capitalize">
-              {roomData.stage}
-            </span>
-          </div>
-        </div>
-
-        {/* Players count indicator */}
-        <div className="absolute top-4 right-4 z-10">
-          <div className="px-3 py-2 rounded-lg bg-black/50 backdrop-blur-sm border border-white/20 text-white">
-            <div className="flex items-center gap-2 text-sm">
-              <FaUsers className="w-4 h-4" />
-              <span>
-                {alivePlayers.length} / {players.length} Alive
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Players */}
-        {players.map((player) => {
-          const position = positions[player.id] || { x: 50, y: 50 };
-          const isCurrentPlayer = player.id === currentPlayerId;
-
-          return (
-            <motion.div
-              key={player.id}
-              className="absolute z-20"
-              animate={{
-                left: `${position.x}%`,
-                top: `${position.y}%`,
-                opacity: player.is_alive ? 1 : 0.4,
-              }}
-              transition={{ duration: 1.5, ease: "easeInOut" }}
-            >
-              <div
-                className="relative group"
-                style={{ transform: "translate(-50%, -50%)" }}
-              >
-                {/* Player avatar */}
-                <div
-                  className={`relative w-16 h-16 lg:w-20 lg:h-20 rounded-full overflow-hidden border-4 transition-all duration-300 ${
-                    isCurrentPlayer
-                      ? "border-yellow-400 shadow-lg shadow-yellow-400/50"
-                      : player.is_alive
-                      ? "border-white/80 hover:border-white"
-                      : "border-red-500/50"
-                  }`}
-                >
-                  <img
-                    src={player.profile}
-                    alt={player.name}
-                    className="w-full h-full object-cover"
-                  />
-
-                  {/* Death overlay */}
-                  {!player.is_alive && (
-                    <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-                      <GiDeathSkull className="text-red-400 text-3xl" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Player name */}
-                <div className="absolute -bottom-7 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                  <span
-                    className={`text-xs lg:text-sm font-medium px-2 py-1 rounded-md backdrop-blur-sm ${
-                      isCurrentPlayer
-                        ? "bg-yellow-500/90 text-yellow-900"
-                        : "bg-black/70 text-white"
-                    }`}
-                  >
-                    {player.name}
-                  </span>
-                </div>
-
-                {/* Action indicators */}
-                {player.is_action_done && player.is_alive && (
-                  <div
-                    className="absolute -top-2 -right-2 w-5 h-5 bg-green-500 rounded-full border-2 border-slate-800 animate-pulse"
-                    title="Action Taken"
-                  />
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
-
-        {/* Center game info */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="text-center">
-            <div
-              className={`inline-flex items-center gap-3 px-6 py-3 rounded-xl backdrop-blur-md border ${
-                isNight
-                  ? "bg-purple-900/40 border-purple-500/30 text-purple-100"
-                  : "bg-blue-900/40 border-blue-500/30 text-blue-100"
-              }`}
-            >
-              {isNight ? (
-                <GiWolfHowl className="text-2xl" />
-              ) : (
-                <FaGamepad className="text-2xl" />
-              )}
-              <div>
-                <div className="text-lg font-bold">Round {roomData.round}</div>
-                <div className="text-sm opacity-80">
-                  {isNight ? "Night Phase" : "Day Phase"}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- Enhanced Role Reveal Modal ---
-const RoleRevealModal = ({ role, onClose }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
-  >
-    <motion.div
-      initial={{ scale: 0.8, y: 50 }}
-      animate={{ scale: 1, y: 0 }}
-      className="relative bg-gradient-to-br from-slate-800 to-slate-900 p-6 lg:p-8 rounded-2xl shadow-2xl border border-slate-700 text-center max-w-sm w-full mx-4"
-    >
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors p-1"
-      >
-        <FaTimes size={20} />
-      </button>
-
-      <div className="mb-4">
-        {role === "wolf" && (
-          <GiWolfHowl className="text-red-400 text-7xl mx-auto" />
-        )}
-        {role === "seer" && (
-          <div className="text-blue-400 text-7xl mx-auto">👁️</div>
-        )}
-        {role === "doctor" && (
-          <GiHeartShield className="text-green-400 text-7xl mx-auto" />
-        )}
-        {role === "villager" && (
-          <div className="text-yellow-400 text-7xl mx-auto">👨‍🌾</div>
-        )}
-      </div>
-
-      <h2 className="text-lg font-semibold text-slate-400 mb-1">
-        You are the...
-      </h2>
-      <h1 className="text-3xl lg:text-4xl font-bold text-purple-400 capitalize mb-4">
-        {role}
-      </h1>
-
-      <p className="text-slate-300 text-sm lg:text-base mb-6 leading-relaxed">
-        {role === "wolf" &&
-          "Your goal is to eliminate all the villagers without being caught."}
-        {role === "seer" &&
-          "Each night, you can discover one player's true identity."}
-        {role === "doctor" &&
-          "Each night, you can choose one person to save from the wolf."}
-        {role === "villager" &&
-          "Your goal is to find and eliminate the wolf among you."}
-      </p>
-
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onClose}
-        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg transition-colors"
-      >
-        Got it!
-      </motion.button>
-    </motion.div>
-  </motion.div>
-);
-
-// --- REDESIGNED Result Modal ---
-const ResultModal = ({ result, onClose, type }) => {
-  const isNight = type === "night";
-
-  const content = {
-    night: {
-      title: "Dawn Breaks...",
-      icon: <FaSun className="text-yellow-400" />,
-      scenarios: {
-        killed: {
-          icon: <GiDeathSkull className="text-red-500" />,
-          message: (name) => (
-            <>
-              <span className="font-bold text-red-400">{name}</span> was killed
-              in the night.
-            </>
-          ),
-          description: "The village mourns a loss.",
-        },
-        saved: {
-          icon: <GiHeartShield className="text-green-500" />,
-          message: (name) => (
-            <>
-              <span className="font-bold text-green-400">{name}</span> was
-              attacked, but saved!
-            </>
-          ),
-          description: "The doctor's intervention was successful.",
-        },
-        quiet: {
-          icon: <FaMoon className="text-blue-300" />,
-          message: () => "The night was eerily quiet.",
-          description: "No one was attacked.",
-        },
-      },
-    },
-    day: {
-      title: "The Verdict Is In...",
-      icon: <FaGavel className="text-amber-500" />,
-      scenarios: {
-        eliminated: {
-          icon: <FaGavel className="text-amber-500" />,
-          message: (name) => (
-            <>
-              <span className="font-bold text-amber-400">{name}</span> has been
-              voted out.
-            </>
-          ),
-          description: "The village has made its choice.",
-        },
-        noOneEliminated: {
-          icon: <GiTiedScroll className="text-gray-400" />,
-          message: () => "The vote was tied.",
-          description: "No one was eliminated today.",
-        },
-      },
-    },
-  };
-
-  const currentContent = content[type];
-  const scenarioKey = Object.keys(result)[0];
-  const scenario = currentContent.scenarios[scenarioKey];
-  const playerName = result[scenarioKey];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.7, y: 50, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        exit={{ scale: 0.7, opacity: 0 }}
-        transition={{ type: "spring", damping: 20, stiffness: 300 }}
-        onClick={(e) => e.stopPropagation()}
-        className="relative bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-2xl shadow-2xl text-center border border-gray-700 max-w-md w-full"
-      >
-        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 p-3 rounded-full border-4 border-gray-700">
-          <motion.div
-            animate={{
-              rotate: [0, 10, -10, 0],
-              transition: { repeat: Infinity, duration: 2 },
-            }}
-          >
-            {currentContent.icon}
-          </motion.div>
-        </div>
-
-        <h2 className="text-2xl font-bold text-gray-200 mt-8 mb-4">
-          {currentContent.title}
-        </h2>
-
-        <div className="flex flex-col items-center justify-center gap-4 my-6">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1, transition: { delay: 0.2, type: "spring" } }}
-            className="text-7xl"
-          >
-            {scenario.icon}
-          </motion.div>
-          <p className="text-xl text-gray-300">
-            {scenario.message(playerName)}
-          </p>
-          <p className="text-sm text-gray-500">{scenario.description}</p>
-        </div>
-
-        <motion.button
-          whileHover={{ scale: 1.05, backgroundColor: "#6b21a8" }} // purple-700
-          whileTap={{ scale: 0.95 }}
-          onClick={onClose}
-          className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg transition-colors"
-        >
-          Continue
-        </motion.button>
-      </motion.div>
-    </motion.div>
-  );
-};
+const StageResult = dynamic(() => import("@/components/ui/stageResult"), {
+  ssr: false,
+});
 
 // --- Main Game Component ---
 export default function Game({ params }) {
@@ -455,16 +78,9 @@ export default function Game({ params }) {
 
   const hasShownRoleModal = useRef(false);
   const prevStageRef = useRef();
-  const playersRef = useRef(players);
-  const prevPlayersRef = useRef(players);
+  const playersAtStageStart = useRef([]);
 
   const [mobileView, setMobileView] = useState("game");
-
-  // --- Side Effects to keep refs updated ---
-  useEffect(() => {
-    prevPlayersRef.current = playersRef.current;
-    playersRef.current = players;
-  }, [players]);
 
   const upsertPlayer = async (roomId, currentUser) => {
     if (!currentUser || !roomId) return;
@@ -504,6 +120,7 @@ export default function Game({ params }) {
       }
       setRoomData(room);
       prevStageRef.current = room.stage; // Initialize prevStageRef here
+      
       if (user) {
         await upsertPlayer(room.id, user);
       }
@@ -517,6 +134,7 @@ export default function Game({ params }) {
         return;
       }
       setPlayers(initialPlayers);
+      playersAtStageStart.current = initialPlayers; // Initialize snapshot with fetched players
     };
     if (isLoaded) {
       initializeGame();
@@ -605,22 +223,22 @@ export default function Game({ params }) {
     }
   }, [roomData?.sound, roomData?.id]);
 
-  const runBotsActions = () => {
-    const bots = playersRef.current.filter((p) => !p.is_human);
+  const runBotsActions = (currentPlayers) => {
+    const bots = currentPlayers.filter((p) => !p.is_human);
     bots.forEach(async (bot) => {
       if (bot.is_action_done || !bot.is_alive) return;
-      const alivePlayers = playersRef.current.filter((p) => p.is_alive);
+      const alivePlayers = currentPlayers.filter((p) => p.is_alive);
       const potentialTargets = alivePlayers.filter((p) => p.id !== bot.id);
       if (potentialTargets.length === 0) return;
       const randomTarget =
         potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
       if (roomData.stage === "day") {
         await voting(bot, randomTarget);
-        await messaging(bot, roomData.id, playersRef.current, randomTarget);
+        await messaging(bot, roomData.id, currentPlayers, randomTarget);
       } else if (roomData.stage === "night") {
         setTimeout(async () => {
-          const currentPlayers = playersRef.current;
-          const currentAlivePlayers = currentPlayers.filter((p) => p.is_alive);
+          const { data: updatedPlayers } = await supabase.from('players').select('*').eq('room_id', roomData.id);
+          const currentAlivePlayers = updatedPlayers.filter((p) => p.is_alive);
           const currentTargets = currentAlivePlayers.filter(
             (p) => p.id !== bot.id
           );
@@ -635,124 +253,86 @@ export default function Game({ params }) {
     });
   };
 
-  // ✅ --- UNIFIED & FIXED LOGIC for Stage Change Results & Host Actions ---
+  // ✅ --- REVISED AND FIXED STAGE CHANGE LOGIC ---
   useEffect(() => {
-    // Don't run on initial load or if stage hasn't changed.
-    if (
-      !prevStageRef.current ||
-      !roomData ||
-      roomData.stage === prevStageRef.current
-    ) {
-      return;
-    }
-
-    // --- Night to Day Transition ---
-    if (prevStageRef.current === "night" && roomData.stage === "day") {
-      const killedPlayer = prevPlayersRef.current.find(
-        (p) =>
-          p.is_alive &&
-          !playersRef.current.find((p2) => p2.id === p.id)?.is_alive
-      );
-      const savedPlayer = playersRef.current.find((p) => p.is_saved);
-
-      if (killedPlayer) {
-        setNightResult({ killed: killedPlayer.name });
-      } else if (savedPlayer) {
-        // No one died, but someone was saved. This implies a successful save.
-        setNightResult({ saved: savedPlayer.name });
-      } else {
-        setNightResult({ quiet: true });
+    const processStageChange = async () => {
+      if (!roomData || roomData.stage === prevStageRef.current) {
+        return;
       }
-    }
 
-    // --- Day to Night Transition (Vote Result) ---
-    if (prevStageRef.current === "day" && roomData.stage === "night") {
-      const votes = {};
-      prevPlayersRef.current.forEach((p) => {
-        if (p.is_alive && p.voted_to) {
-          votes[p.voted_to] = (votes[p.voted_to] || 0) + 1;
-        }
-      });
+      const { data: currentPlayers, error } = await supabase
+        .from("players")
+        .select("*")
+        .eq("room_id", roomData.id);
 
-      let maxVotes = 0;
-      Object.values(votes).forEach((voteCount) => {
-        if (voteCount > maxVotes) {
-          maxVotes = voteCount;
-        }
-      });
+      if (error) {
+        console.error("Failed to fetch players on stage change:", error);
+        return;
+      }
 
-      const playersWithMaxVotes = [];
-      if (maxVotes > 0) {
-        for (const playerId in votes) {
-          if (votes[playerId] === maxVotes) {
-            playersWithMaxVotes.push(playerId);
-          }
+      if (prevStageRef.current === "night" && roomData.stage === "day") {
+        const killedPlayer = playersAtStageStart.current.find(
+          (p) => p.is_alive && !currentPlayers.find((p2) => p2.id === p.id)?.is_alive
+        );
+        const savedPlayer = currentPlayers.find((p) => p.is_saved);
+
+        if (killedPlayer) {
+          setNightResult({ killed: killedPlayer.name });
+        } else if (savedPlayer) {
+          setNightResult({ saved: savedPlayer.name });
+        } else {
+          setNightResult({ quiet: true });
         }
       }
 
-      if (playersWithMaxVotes.length === 1) {
-        const votedOutId = playersWithMaxVotes[0];
-        const votedOutPlayer = prevPlayersRef.current.find(
-          (p) => p.id === parseInt(votedOutId)
+      if (prevStageRef.current === "day" && roomData.stage === "night") {
+        const votedOutPlayer = playersAtStageStart.current.find(
+          (p) => p.is_alive && !currentPlayers.find((p2) => p2.id === p.id)?.is_alive
         );
 
         if (votedOutPlayer) {
-          if (currentPlayer?.player_id === roomData.host_id) {
-            supabase
-              .from("players")
-              .update({ is_alive: false })
-              .eq("id", votedOutPlayer.id)
-              .then();
-          }
           setDayResult({ eliminated: votedOutPlayer.name });
         } else {
           setDayResult({ noOneEliminated: true });
         }
-      } else {
-        setDayResult({ noOneEliminated: true });
       }
-    }
 
-    // --- Host handles new turn setup & Bot Actions ---
-    if (currentPlayer?.player_id === roomData.host_id) {
-      const handleNewTurn = async () => {
-        if (roomData.stage === "night") {
-          await supabase
-            .from("rooms")
-            .update({ round: roomData.round + 1 })
-            .eq("id", roomData.id);
-        }
-        // Reset action status for the new phase for all players
-        const updates = playersRef.current.map((p) => ({
-          id: p.id,
-          is_action_done: false,
-        }));
-        await supabase.from("players").upsert(updates);
+      if (user?.id === roomData.host_id) {
+        const handleNewTurn = async () => {
+          if (roomData.stage === "night") {
+            await supabase
+              .from("rooms")
+              .update({ round: roomData.round + 1 })
+              .eq("id", roomData.id);
+          }
+          
+          const playerUpdatePromises = currentPlayers.map((p) => {
+            const updateData = { is_action_done: false };
+            if (roomData.stage === "night") {
+              updateData.is_saved = false;
+              updateData.voted_to = null;
+            }
+            return supabase.from("players").update(updateData).eq("id", p.id);
+          });
 
-        // If a new NIGHT is starting, also reset save and vote statuses
-        if (roomData.stage === "night") {
-          const nightResetUpdates = playersRef.current.map((p) => ({
-            id: p.id,
-            is_saved: false,
-            voted_to: null,
-          }));
-          await supabase.from("players").upsert(nightResetUpdates);
-        }
+          await Promise.all(playerUpdatePromises);
+          runBotsActions(currentPlayers);
+        };
+        handleNewTurn();
+      }
 
-        runBotsActions();
-      };
-      handleNewTurn();
-    }
+      prevStageRef.current = roomData.stage;
+      playersAtStageStart.current = currentPlayers;
+    };
 
-    // Update the ref for the next cycle
-    prevStageRef.current = roomData.stage;
-  }, [roomData?.stage, currentPlayer]);
+    processStageChange();
+
+  }, [roomData?.stage, roomData?.id, roomData?.host_id, user?.id]);
 
   // --- Main Game Logic (Winner Check & Role Modal) ---
   useEffect(() => {
     if (!players.length || !roomData) return;
 
-    // Show role modal once
     if (
       roomData.roles_assigned &&
       !hasShownRoleModal.current &&
@@ -762,7 +342,6 @@ export default function Game({ params }) {
       hasShownRoleModal.current = true;
     }
 
-    // Winner check logic
     const isGameActive = roomData.stage === "day" || roomData.stage === "night";
     const rolesAreSet = players.every((p) => p.role !== null);
 
@@ -913,7 +492,7 @@ export default function Game({ params }) {
         )}
 
         {nightResult && (
-          <ResultModal
+          <StageResult
             result={nightResult}
             onClose={() => setNightResult(null)}
             type="night"
@@ -921,7 +500,7 @@ export default function Game({ params }) {
         )}
 
         {dayResult && (
-          <ResultModal
+          <StageResult
             result={dayResult}
             onClose={() => setDayResult(null)}
             type="day"
@@ -944,7 +523,7 @@ export default function Game({ params }) {
 
         {/* Center: Game Board */}
         <div className="flex-grow min-w-0 order-1 lg:order-2 h-[50vh] lg:h-auto">
-          <EnhancedGameBox
+          <GameBox
             roomData={roomData}
             players={players}
             currentPlayerId={currentPlayer?.id}

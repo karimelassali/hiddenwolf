@@ -1,193 +1,134 @@
-import Image from "next/image";
-import { motion, AnimatePresence } from "framer-motion";
-import { FaSkull, FaHeart, FaShieldAlt, FaMoon } from "react-icons/fa";
+import {
+  FaHourglass,
+  FaTimes,
+  FaGavel,
+  FaUsers,
+  FaSun,
+  FaMoon,
+} from "react-icons/fa";
+import {
+  GiHeartShield,
+  GiDeathSkull,
+  GiTiedScroll,
+} from "react-icons/gi";
+import {motion} from "framer-motion";
+export default function StageResult ({ result, onClose, type }) {
+  const isNight = type === "night";
 
-export default function StageResult({ result, players, status }) {
- const deadPlayers = players.filter(p => !p.is_alive);
- const savedPlayer = players.find(p => p.is_saved);
- 
- return (
-   <motion.div 
-     initial={{ opacity: 0 }}
-     animate={{ opacity: 1 }}
-     exit={{ opacity: 0 }}
-     className="fixed w-full h-full bottom-0 left-0 bg-gradient-to-br from-red-900 via-red-800 to-red-900 flex justify-center flex-col items-center gap-8 z-50"
-   >
-     {/* Atmospheric overlay */}
-     <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" />
-     
-     {/* Floating particles */}
-     <div className="absolute inset-0 overflow-hidden">
-       {[...Array(30)].map((_, i) => (
-         <motion.div
-           key={i}
-           initial={{ opacity: 0, y: 100, x: Math.random() * window.innerWidth }}
-           animate={{ 
-             opacity: [0, 1, 0], 
-             y: -100, 
-             x: Math.random() * window.innerWidth,
-             rotate: Math.random() * 360
-           }}
-           transition={{ 
-             duration: 4, 
-             delay: Math.random() * 3, 
-             repeat: Infinity,
-             repeatDelay: Math.random() * 5
-           }}
-           className="absolute w-2 h-2 bg-red-400/30 rounded-full"
-         />
-       ))}
-     </div>
+  const content = {
+    night: {
+      title: "Dawn Breaks...",
+      icon: <FaSun className="text-yellow-400" />,
+      scenarios: {
+        killed: {
+          icon: <GiDeathSkull className="text-red-500" />,
+          message: (name) => (
+            <>
+              <span className="font-bold text-red-400">{name}</span> was killed
+              in the night.
+            </>
+          ),
+          description: "The village mourns a loss.",
+        },
+        saved: {
+          icon: <GiHeartShield className="text-green-500" />,
+          message: (name) => (
+            <>
+              <span className="font-bold text-green-400">{name}</span> was
+              attacked, but saved!
+            </>
+          ),
+          description: "The doctor's intervention was successful.",
+        },
+        quiet: {
+          icon: <FaMoon className="text-blue-300" />,
+          message: () => "The night was eerily quiet.",
+          description: "No one was attacked.",
+        },
+      },
+    },
+    day: {
+      title: "The Verdict Is In...",
+      icon: <FaGavel className="text-amber-500" />,
+      scenarios: {
+        eliminated: {
+          icon: <FaGavel className="text-amber-500" />,
+          message: (name) => (
+            <>
+              <span className="font-bold text-amber-400">{name}</span> has been
+              voted out.
+            </>
+          ),
+          description: "The village has made its choice.",
+        },
+        noOneEliminated: {
+          icon: <GiTiedScroll className="text-gray-400" />,
+          message: () => "The vote was tied.",
+          description: "No one was eliminated today.",
+        },
+      },
+    },
+  };
 
-     {/* Header Section */}
-     <motion.div 
-       initial={{ y: -50, opacity: 0 }}
-       animate={{ y: 0, opacity: 1 }}
-       transition={{ delay: 0.3 }}
-       className="text-center relative z-10"
-     >
-       <div className="flex items-center justify-center gap-4 mb-4">
-         <FaMoon className="text-4xl text-slate-300" />
-         <h2 className="text-5xl font-bold text-white drop-shadow-lg">
-           Night Results
-         </h2>
-         <FaMoon className="text-4xl text-slate-300" />
-       </div>
-       
-       <motion.div
-         initial={{ scale: 0 }}
-         animate={{ scale: 1 }}
-         transition={{ delay: 0.5, type: "spring" }}
-         className="w-16 h-1 bg-red-500 mx-auto rounded-full"
-       />
-     </motion.div>
+  const currentContent = content[type];
+  const scenarioKey = Object.keys(result)[0];
+  const scenario = currentContent.scenarios[scenarioKey];
+  const playerName = result[scenarioKey];
 
-     {/* Wolf Image */}
-     <motion.div
-       initial={{ scale: 0, rotate: -180 }}
-       animate={{ scale: 1, rotate: 0 }}
-       transition={{ delay: 0.7, type: "spring", damping: 15 }}
-       className="relative z-10"
-     >
-       <div className="relative">
-         <div className="absolute inset-0 bg-red-600/30 rounded-full blur-xl scale-110 animate-pulse" />
-         <Image
-           src={`/assets/images/wolf.png`}
-           alt={result}
-           width={250}
-           height={250}
-           className="relative z-10 drop-shadow-2xl"
-         />
-       </div>
-     </motion.div>
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.7, y: 50, opacity: 0 }}
+        animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.7, opacity: 0 }}
+        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+        onClick={(e) => e.stopPropagation()}
+        className="relative bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-2xl shadow-2xl text-center border border-gray-700 max-w-md w-full"
+      >
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 p-3 rounded-full border-4 border-gray-700">
+          <motion.div
+            animate={{
+              rotate: [0, 10, -10, 0],
+              transition: { repeat: Infinity, duration: 2 },
+            }}
+          >
+            {currentContent.icon}
+          </motion.div>
+        </div>
 
-     {/* Results Section */}
-     <motion.div 
-       initial={{ y: 50, opacity: 0 }}
-       animate={{ y: 0, opacity: 1 }}
-       transition={{ delay: 0.9 }}
-       className="text-center relative z-10 max-w-2xl mx-4"
-     >
-       {/* Death notifications */}
-       {deadPlayers.length > 0 && (
-         <div className="mb-6">
-           <h3 className="text-2xl font-bold text-red-300 mb-4 flex items-center justify-center gap-2">
-             <FaSkull className="text-xl" />
-             The Darkness Claims Its Victims
-             <FaSkull className="text-xl" />
-           </h3>
-           
-           <div className="space-y-3">
-             {deadPlayers.map((player, index) => (
-               <motion.div
-                 key={player.id}
-                 initial={{ x: -100, opacity: 0 }}
-                 animate={{ x: 0, opacity: 1 }}
-                 transition={{ delay: 1.1 + (index * 0.2) }}
-                 className="flex items-center justify-center gap-4 bg-black/30 backdrop-blur-md rounded-xl p-4 border border-red-500/30"
-               >
-                 <div className="relative">
-                   <img 
-                     src={player.profile || '/default-avatar.png'} 
-                     alt={player.name}
-                     className="w-12 h-12 rounded-full border-2 border-red-500 grayscale"
-                   />
-                   <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-600 rounded-full flex items-center justify-center">
-                     <FaSkull className="text-white text-xs" />
-                   </div>
-                 </div>
-                 <div className="text-left">
-                   <p className="text-xl font-bold text-white">{player.name}</p>
-                   <p className="text-red-300 text-sm">Eliminated by the {player.dying_method == 'wolf' ? 'wolf' : 'Voting'}</p>
-                 </div>
-               </motion.div>
-             ))}
-           </div>
-         </div>
-       )}
+        <h2 className="text-2xl font-bold text-gray-200 mt-8 mb-4">
+          {currentContent.title}
+        </h2>
 
-       {/* Saved player notification */}
-       <AnimatePresence>
-         {savedPlayer && (
-           <motion.div
-             initial={{ scale: 0, y: 20 }}
-             animate={{ scale: 1, y: 0 }}
-             exit={{ scale: 0, y: -20 }}
-             transition={{ delay: 1.5, type: "spring" }}
-             className="bg-gradient-to-r from-emerald-800/80 to-emerald-700/80 backdrop-blur-md rounded-xl p-6 border border-emerald-500/50 shadow-2xl"
-           >
-             <h3 className="text-2xl font-bold text-emerald-300 mb-4 flex items-center justify-center gap-2">
-               <FaShieldAlt className="text-xl" />
-               Divine Protection
-               <FaHeart className="text-xl text-pink-400" />
-             </h3>
-             
-             <div className="flex items-center justify-center gap-4">
-               <div className="relative">
-                 <img 
-                   src={savedPlayer.profile || '/default-avatar.png'} 
-                   alt={savedPlayer.name}
-                   className="w-16 h-16 rounded-full border-4 border-emerald-400 shadow-lg shadow-emerald-500/50"
-                 />
-                 <div className="absolute -top-2 -right-2 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center animate-pulse">
-                   <FaHeart className="text-white text-sm" />
-                 </div>
-               </div>
-               <div className="text-left">
-                 <p className="text-2xl font-bold text-white">{savedPlayer.name}</p>
-                 <p className="text-emerald-300">was saved by the Doctor!</p>
-               </div>
-             </div>
-           </motion.div>
-         )}
-       </AnimatePresence>
+        <div className="flex flex-col items-center justify-center gap-4 my-6">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1, transition: { delay: 0.2, type: "spring" } }}
+            className="text-7xl"
+          >
+            {scenario.icon}
+          </motion.div>
+          <p className="text-xl text-gray-300">
+            {scenario.message(playerName)}
+          </p>
+          <p className="text-sm text-gray-500">{scenario.description}</p>
+        </div>
 
-       {/* General result message */}
-       {!status && (
-         <motion.div
-           initial={{ opacity: 0 }}
-           animate={{ opacity: 1 }}
-           transition={{ delay: 1.7 }}
-           className="mt-6 bg-black/50 backdrop-blur-md rounded-xl p-4 border border-red-500/30"
-         >
-           <p className="text-xl text-red-300 font-medium">
-             {result || "The wolves prowled through the night..."}
-           </p>
-         </motion.div>
-       )}
-     </motion.div>
-
-     {/* Decorative elements */}
-     <motion.div
-       animate={{ rotate: 360 }}
-       transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-       className="absolute top-10 right-10 w-24 h-24 border-4 border-red-500/20 rounded-full"
-     />
-     <motion.div
-       animate={{ rotate: -360 }}
-       transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-       className="absolute bottom-10 left-10 w-32 h-32 border-2 border-red-600/10 rounded-full"
-     />
-   </motion.div>
- );
-}
+        <motion.button
+          whileHover={{ scale: 1.05, backgroundColor: "#6b21a8" }} // purple-700
+          whileTap={{ scale: 0.95 }}
+          onClick={onClose}
+          className="w-full bg-purple-600 text-white font-bold py-3 rounded-lg transition-colors"
+        >
+          Continue
+        </motion.button>
+      </motion.div>
+    </motion.div>
+  );
+};
