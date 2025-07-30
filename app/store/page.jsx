@@ -107,7 +107,7 @@ export default function Page() {
   return (
     <div
       style={{
-        backgroundImage: "url('/assets/images/store.png')",
+        backgroundImage: "url('/assets/images/store.avif')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

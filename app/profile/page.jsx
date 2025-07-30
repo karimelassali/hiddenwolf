@@ -203,7 +203,7 @@ export default function Page() {
   return (
     <div
       style={{
-        backgroundImage: "url('/assets/images/profile_bg.png')",
+        backgroundImage: "url('/assets/images/profile_bg.avif')",
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}

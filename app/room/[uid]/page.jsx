@@ -183,7 +183,7 @@ export default function Room({ params }) {
 
   return (
     <div
-      style={{ backgroundImage: 'url("/assets/images/waitingBackground.webp")' }}
+      style={{ backgroundImage: 'url("/assets/images/waitingBackground.avif")' }}
       className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col"
     >
       <Players fetched_players={players} room_host_id={roomData?.host_id} />
