@@ -5,12 +5,14 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { Trophy, Crown, Medal, Star, TrendingUp, Users, Target, Award } from 'lucide-react';
-
+import { FaArrowLeft } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
 export default function Page() {
     const { user, isLoaded } = useUser();
     const [ranking, setRanking] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentUserRank, setCurrentUserRank] = useState(null);
+    const router = useRouter();
 
     const fetchTopPlayers = async () => {
         setLoading(true);
@@ -95,7 +97,7 @@ export default function Page() {
                 {[...Array(20)].map((_, i) => (
                     <motion.div
                         key={i}
-                        className="absolute w-1 h-1 bg-slate-400/20 rounded-full"
+                        className="absolute w-5 h-5 bg-slate-400/20 rounded-full"
                         initial={{
                             x: Math.random() * (typeof window !== "undefined" ? window.innerWidth : 1000),
                             y: Math.random() * (typeof window !== "undefined" ? window.innerHeight : 800),
@@ -106,7 +108,7 @@ export default function Page() {
                             opacity: [0.2, 0.8, 0.2],
                         }}
                         transition={{
-                            duration: Math.random() * 20 + 15,
+                            duration: Math.random() * 10 + 1,
                             repeat: Infinity,
                             ease: "linear",
                         }}
@@ -114,7 +116,20 @@ export default function Page() {
                 ))}
             </div>
 
-            <div className="relative z-10 max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+            <div className="relative  z-10 max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+                <motion.div
+                    initial={{ y: -50, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ duration: 0.6 }}
+                    className="flex items-center justify-start mb-4"
+                >
+                    <button
+                        onClick={() => router.back()}
+                        className="bg-slate-800/20 p-2 rounded-full text-slate-400 hover:text-white transition-colors"
+                    >
+                        <FaArrowLeft size={20} />
+                    </button>
+                </motion.div>
                 {/* Header Section */}
                 <motion.div
                     initial={{ y: -50, opacity: 0 }}

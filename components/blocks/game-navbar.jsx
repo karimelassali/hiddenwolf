@@ -8,7 +8,7 @@ import { Countdown } from "@/components/ui/countdown";
 import { Vote } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { toast, Toaster } from "react-hot-toast";
-
+import {motion, AnimatePresence} from "framer-motion";
 export default function GameNavbar({
   uid,
   roomData,
@@ -110,49 +110,55 @@ export default function GameNavbar({
     <>
       <Toaster />
       <nav
-        className={`relative w-full px-4 py-3 transition-all duration-500 shadow-md ${
+        className={`relative w-full px-3 sm:px-4 lg:px-6 py-3 sm:py-4 transition-all duration-500 shadow-lg z-40 ${
           isNight
-            ? "bg-gradient-to-r from-slate-900/90 to-purple-900/90 backdrop-blur-sm"
-            : "bg-gradient-to-r from-violet-600/90 to-indigo-700/90 backdrop-blur-sm"
+            ? "bg-gradient-to-r from-slate-900/95 to-purple-900/95 backdrop-blur-md border-b border-purple-500/20"
+            : "bg-gradient-to-r from-violet-600/95 to-indigo-700/95 backdrop-blur-md border-b border-indigo-400/20"
         }`}
       >
         {/* ================================================================== */}
-        {/* ✅ PROFESSIONAL UI: DESKTOP VIEW (> 640px)                      */}
-        {/* This is hidden on mobile and shown on small screens and up.      */}
+        {/* DESKTOP VIEW (lg and up - 1024px+)                                */}
         {/* ================================================================== */}
-        <div className="hidden sm:flex items-center justify-between gap-2">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg">
-              <FaLock className="w-4 h-4" />{" "}
-              <span className="font-semibold">Room {uid}</span>
+        <div className="hidden lg:flex items-center justify-between gap-4">
+          {/* Left Section */}
+          <div className="flex items-center gap-3 xl:gap-4">
+            <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10 shadow-lg">
+              <FaLock className="w-4 h-4 text-slate-300" />
+              <span className="font-semibold text-white">Room {uid}</span>
             </div>
+            
             {isHost && (
-              <div className="flex items-center gap-2 bg-yellow-500 text-yellow-900 px-3 py-2 rounded-lg font-medium">
-                <FaCrown className="w-4 h-4" /> <span>Host</span>
+              <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-yellow-900 px-3 py-2 rounded-lg font-medium shadow-lg border border-yellow-400/50">
+                <FaCrown className="w-4 h-4" />
+                <span>Host</span>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg">
+  
+          {/* Center Section */}
+          <div className="flex items-center gap-3 xl:gap-4">
+            <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10 shadow-lg">
               {isNight ? (
                 <IoMoon className="w-5 h-5 text-purple-300" />
               ) : (
                 <IoSunny className="w-5 h-5 text-yellow-300" />
               )}
-              <span className="font-semibold capitalize">{roomData.stage}</span>
+              <span className="font-semibold capitalize text-white">{roomData.stage}</span>
             </div>
-            <div className="bg-black/20 px-3 py-2 rounded-lg">
+            
+            <div className="bg-black/30 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10 shadow-lg">
               <span className="text-white/70">Round </span>
-              <span className="font-bold text-lg">{roomData.round}</span>
+              <span className="font-bold text-lg text-white">{roomData.round}</span>
             </div>
-            <div className="bg-black/20 px-3 py-2 rounded-lg">
+            
+            <div className="bg-black/30 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10 shadow-lg">
               <span className="text-white/70">Alive </span>
-              <span className="font-bold text-lg text-green-400">
-                {alivePlayersCount}
-              </span>
+              <span className="font-bold text-lg text-green-400">{alivePlayersCount}</span>
             </div>
           </div>
-          <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-red-400/30 bg-red-900/40">
+  
+          {/* Right Section - Timer */}
+          <div className="flex items-center gap-3 px-4 py-2 rounded-lg border border-red-400/40 bg-gradient-to-r from-red-900/60 to-red-800/60 backdrop-blur-sm shadow-lg">
             <IoTimerSharp className="w-5 h-5 text-red-400 animate-pulse" />
             {counter && (
               <span className="font-mono font-bold text-xl text-red-300">
@@ -164,43 +170,51 @@ export default function GameNavbar({
             )}
           </div>
         </div>
-
+  
         {/* ================================================================== */}
-        {/* ✅ PROFESSIONAL UI: MOBILE VIEW (< 640px)                       */}
-        {/* This is shown only on mobile and hidden on larger screens.       */}
+        {/* TABLET VIEW (sm to lg - 640px to 1023px)                          */}
         {/* ================================================================== */}
-        <div className="flex sm:hidden items-center justify-between gap-2">
-          {/* Left: Hamburger Menu Button */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="z-20 p-2 text-white"
-          >
-            {isMobileMenuOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
-          </button>
-
-          {/* Center: Essential Status */}
+        <div className="hidden sm:flex lg:hidden items-center justify-between gap-2">
+          {/* Left Section */}
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg">
-              {isNight ? (
-                <IoMoon className="w-5 h-5 text-purple-300" />
-              ) : (
-                <IoSunny className="w-5 h-5 text-yellow-300" />
-              )}
-              <span className="font-semibold capitalize text-sm">
-                {roomData.stage}
-              </span>
+            <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10">
+              <FaLock className="w-4 h-4 text-slate-300" />
+              <span className="font-semibold text-white text-sm">{uid}</span>
             </div>
-            <div className="bg-black/20 px-3 py-1.5 rounded-lg">
-              <span className="font-bold text-base text-green-400">
-                {alivePlayersCount}
-              </span>
-              <span className="text-white/70 text-sm"> Alive</span>
+            
+            {isHost && (
+              <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-yellow-900 px-2 py-1.5 rounded-lg font-medium text-sm">
+                <FaCrown className="w-3 h-3" />
+                <span className="hidden md:inline">Host</span>
+              </div>
+            )}
+          </div>
+  
+          {/* Center Section */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10">
+              {isNight ? (
+                <IoMoon className="w-4 h-4 text-purple-300" />
+              ) : (
+                <IoSunny className="w-4 h-4 text-yellow-300" />
+              )}
+              <span className="font-semibold capitalize text-white text-sm">{roomData.stage}</span>
+            </div>
+            
+            <div className="bg-black/30 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10">
+              <span className="text-white/70 text-sm">R</span>
+              <span className="font-bold text-white ml-1">{roomData.round}</span>
+            </div>
+            
+            <div className="bg-black/30 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/10">
+              <span className="font-bold text-green-400">{alivePlayersCount}</span>
+              <span className="text-white/70 text-sm ml-1">Alive</span>
             </div>
           </div>
-
-          {/* Right: Timer */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-red-400/30 bg-red-900/40">
-            <IoTimerSharp className="w-5 h-5 text-red-400" />
+  
+          {/* Right Section - Timer */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-400/40 bg-gradient-to-r from-red-900/60 to-red-800/60 backdrop-blur-sm">
+            <IoTimerSharp className="w-4 h-4 text-red-400" />
             {counter && (
               <span className="font-mono font-bold text-lg text-red-300">
                 <Countdown
@@ -211,39 +225,136 @@ export default function GameNavbar({
             )}
           </div>
         </div>
-
-        {/* Dropdown Mobile Menu Content */}
-        {isMobileMenuOpen && (
-          <div className="sm:hidden absolute top-full z-5 0 left-0 w-full p-4 bg-slate-800 shadow-xl rounded-b-lg border-t border-slate-700">
-            <div className="flex z-50 flex-col gap-3">
-              <div className="flex items-center gap-2 bg-black/20 px-3 py-2 rounded-lg text-white">
-                <FaLock className="w-4 h-4 text-slate-400" />
-                <span className="font-semibold">Room: {uid}</span>
-              </div>
-              {isHost && (
-                <div className="flex items-center gap-2 bg-yellow-500 text-yellow-900 px-3 py-2 rounded-lg font-medium">
-                  <FaCrown className="w-4 h-4" />
-                  <span>You are the Host</span>
-                </div>
+  
+        {/* ================================================================== */}
+        {/* MOBILE VIEW (< 640px)                                             */}
+        {/* ================================================================== */}
+        <div className="flex sm:hidden items-center justify-between gap-2">
+          {/* Left: Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="z-50 p-2 text-white hover:bg-white/10 rounded-lg transition-colors"
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+          >
+            <div className="relative w-5 h-5">
+              <span className={`absolute block h-0.5 w-full bg-current transform transition-all duration-300 ${
+                isMobileMenuOpen ? 'rotate-45 top-2' : 'top-1'
+              }`} />
+              <span className={`absolute block h-0.5 w-full bg-current transform transition-all duration-300 top-2 ${
+                isMobileMenuOpen ? 'opacity-0' : 'opacity-100'
+              }`} />
+              <span className={`absolute block h-0.5 w-full bg-current transform transition-all duration-300 ${
+                isMobileMenuOpen ? '-rotate-45 top-2' : 'top-3'
+              }`} />
+            </div>
+          </button>
+  
+          {/* Center: Essential Status */}
+          <div className="flex items-center gap-2 flex-1 justify-center max-w-xs">
+            <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10">
+              {isNight ? (
+                <IoMoon className="w-4 h-4 text-purple-300 flex-shrink-0" />
+              ) : (
+                <IoSunny className="w-4 h-4 text-yellow-300 flex-shrink-0" />
               )}
-              <div className="bg-black/20 px-3 py-2 rounded-lg text-white">
-                <span className="text-white/70">Current Round: </span>
-                <span className="font-bold text-lg">{roomData.round}</span>
-              </div>
+              <span className="font-semibold capitalize text-white text-sm truncate">
+                {roomData.stage}
+              </span>
+            </div>
+            
+            <div className="bg-black/30 backdrop-blur-sm px-2.5 py-1.5 rounded-lg border border-white/10">
+              <span className="font-bold text-green-400 text-sm">{alivePlayersCount}</span>
+              <span className="text-white/70 text-xs ml-1">Live</span>
             </div>
           </div>
+  
+          {/* Right: Timer */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-red-400/40 bg-gradient-to-r from-red-900/60 to-red-800/60 backdrop-blur-sm">
+            <IoTimerSharp className="w-4 h-4 text-red-400 flex-shrink-0" />
+            {counter && (
+              <span className="font-mono font-bold text-sm text-red-300">
+                <Countdown
+                  usage="room"
+                  onComplete={() => onCountDownFinished()}
+                />
+              </span>
+            )}
+          </div>
+        </div>
+  
+        {/* ================================================================== */}
+        {/* MOBILE DROPDOWN MENU                                              */}
+        {/* ================================================================== */}
+        <AnimatePresence>
+          {isMobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="sm:hidden absolute top-full left-0 right-0 z-40 mx-3 mt-2 p-4 bg-slate-800/95 backdrop-blur-md shadow-xl rounded-xl border border-slate-700/50"
+            >
+              <div className="flex flex-col gap-3">
+                {/* Room Info */}
+                <div className="flex items-center gap-2 bg-black/20 px-3 py-2.5 rounded-lg text-white border border-white/10">
+                  <FaLock className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <div>
+                    <span className="font-semibold">Room Code: </span>
+                    <span className="font-mono font-bold text-blue-300">{uid}</span>
+                  </div>
+                </div>
+                
+                {/* Host Status */}
+                {isHost && (
+                  <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-500/90 to-yellow-600/90 text-yellow-900 px-3 py-2.5 rounded-lg font-medium border border-yellow-400/50">
+                    <FaCrown className="w-4 h-4 flex-shrink-0" />
+                    <span>You are the Host</span>
+                  </div>
+                )}
+                
+                {/* Game Stats */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-black/20 px-3 py-2.5 rounded-lg text-white border border-white/10">
+                    <div className="text-white/70 text-xs mb-1">Current Round</div>
+                    <div className="font-bold text-lg">{roomData.round}</div>
+                  </div>
+                  
+                  <div className="bg-black/20 px-3 py-2.5 rounded-lg text-white border border-white/10">
+                    <div className="text-white/70 text-xs mb-1">Total Players</div>
+                    <div className="font-bold text-lg">{players?.length || 0}</div>
+                  </div>
+                </div>
+                
+                {/* Close Button */}
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full mt-2 py-2.5 bg-slate-700/50 hover:bg-slate-600/50 text-white rounded-lg transition-colors border border-slate-600/50"
+                >
+                  Close Menu
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+  
+        {/* Backdrop for mobile menu */}
+        {isMobileMenuOpen && (
+          <div 
+            className="sm:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-30"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
         )}
       </nav>
-
-      {modalOpen && (
-        <Modal
-          usage="voting"
-          prop={votingData}
-          onClose={() => {
-            setModalOpen(false);
-          }}
-        />
-      )}
+  
+      {/* Modal */}
+      <AnimatePresence>
+        {modalOpen && (
+          <Modal
+            usage="voting"
+            prop={votingData}
+            onClose={() => setModalOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </>
-  );
-}
+  );}

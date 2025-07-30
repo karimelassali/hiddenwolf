@@ -161,7 +161,7 @@ export default function Room({ params }) {
   const handleStartGame = async () => {
     if (!user || user.id !== roomData?.host_id) return;
     try {
-      await addBotsIfNeeded(roomData.id, 4 - players.length);
+      await addBotsIfNeeded(roomData.id, 4- players.length);
       await supabase.from("rooms").update({ stage: "night" }).eq("id", roomData.id);
     } catch (error) {
       console.error("Error starting game:", error);
