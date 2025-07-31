@@ -24,7 +24,7 @@ export default function GameActionsBar({ roomInfo, playerInfo, players, mobileVi
 
     return (
         // The main container is now relative to position the floating action button
-        <div className="relative z-20">
+        <div className="fixed w-full bottom-0 z-20">
 
             {/* ✅ NEW: Floating Action Button Container */}
             {/* This appears ONLY on mobile and ONLY when the player has an action */}
