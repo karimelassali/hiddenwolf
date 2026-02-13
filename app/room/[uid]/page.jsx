@@ -11,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 // --- Import UI Components ---
 import { Players } from "@/components/Players";
 import { Countdown } from "@/components/ui/countdown";
-import { Loader } from "@/components/ui/loader"; 
+import { Loader } from "@/components/ui/loader";
 
 // --- Import Utility Functions ---
 import { addBotsIfNeeded } from "@/utils/addBotsIfNeeded";
@@ -51,24 +51,24 @@ export default function Room({ params }) {
         is_human: true,
         last_seen: new Date().toISOString(),
       };
-      
+
       await supabase.from("players").upsert(playerData, { onConflict: 'player_id' });
-      
+
     } catch (error) {
       console.error("Error in upsertPlayer:", error);
     }
   };
-  
+
   // --- useEffect Hooks ---
   useEffect(() => {
     if (!uid) return;
-    
+
     const initializeRoom = async () => {
       setIsLoading(true);
       // 1. Fetch room data
       const { data: room, error: roomError } = await supabase.from("rooms").select("*").eq("code", uid).single();
       if (roomError || !room) {
-        console.error("Room not found. Redirecting.", roomError);
+        console.error(`Room not found for code: ${uid}. Redirecting. Error:`, roomError);
         router.push("/");
         return;
       }
@@ -86,7 +86,7 @@ export default function Room({ params }) {
       } else {
         setPlayers(initialPlayers);
       }
-      
+
       setIsLoading(false);
     };
 
@@ -161,13 +161,13 @@ export default function Room({ params }) {
   const handleStartGame = async () => {
     if (!user || user.id !== roomData?.host_id) return;
     try {
-      await addBotsIfNeeded(roomData.id, 4- players.length);
+      await addBotsIfNeeded(roomData.id, 4 - players.length);
       await supabase.from("rooms").update({ stage: "night" }).eq("id", roomData.id);
     } catch (error) {
       console.error("Error starting game:", error);
     }
   };
-  
+
   // --- Render Logic ---
   if (isLoading) {
     return <div className="h-screen flex items-center justify-center bg-slate-900"><Loader /></div>;

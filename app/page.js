@@ -12,10 +12,12 @@ import { Modal } from "@/components/modal";
 import { NumberCounting } from "@/components/magicui/number-ticker";
 import { BorderBeam } from "@/components/magicui/border-beam";
 import { ShineBorder } from "@/components/magicui/shine-border";
+
 export default function Home() {
   const fetchUser = useUser();
+  const router = useRouter();
 
-  const [user, setUser] = useState([]);
+  const [user, setUser] = useState(null);
   const [roomIsCreating, setRoomIsCreating] = useState(false);
   const [revealCoins, setRevealCoins] = useState(null);
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
@@ -32,50 +34,85 @@ export default function Home() {
     'url("/assets/images/background1.avif")',
   ];
 
-  const fullId = uuidv4();
-  const shortId = fullId.slice(0, 4);
-  const router = useRouter();
-
-  const checkIfPlayerRegistred = async () => {
+  const checkIfPlayerRegistred = async (currentUser) => {
     try {
-      if (user.id) {
-        const { data, error } = await supabase
+      if (currentUser?.id) {
+        const { data: existingData, error: fetchError } = await supabase
           .from("player_stats")
           .select("player_id")
-          .eq("player_id", user.id);
-        if (error) {
-          console.error("Error fetching player data:", error);
+          .eq("player_id", currentUser.id);
+
+        if (fetchError) {
+          console.error("Error fetching player data:", fetchError);
+          return null;
         }
-        if (data.length === 0) {
+
+        if (existingData && existingData.length === 0) {
           const coins = [100, 20, 499, 900, 1000, 3000];
           const giftCoins = Math.floor(Math.random() * coins.length);
-          const { data, error } = await supabase
+          const { data: insertedData, error: insertError } = await supabase
             .from("player_stats")
             .insert({
-              player_id: user.id,
+              player_id: currentUser.id,
               coins: coins[giftCoins],
-              email: user.emailAddresses[0].emailAddress,
-            });
+              email: currentUser.emailAddresses[0].emailAddress,
+            })
+            .select();
+
           setRevealCoins(coins[giftCoins]);
-          if (error) {
-            console.error("Error fetching player data:", error);
+          if (insertError) {
+            console.error("Error creating player data:", insertError);
+            return null;
           }
-          console.log("Player data:", data);
+          console.log("Player data created:", insertedData);
+          return insertedData;
         }
-        return data;
+        return existingData;
       }
     } catch (error) {
-      console.error("Error fetching player data:", error);
+      console.error("Error in checkIfPlayerRegistred:", error);
+    }
+    return null;
+  };
+
+  const fetchPlayerDetails = async (currentUser) => {
+    // Remove stale player records
+    supabase
+      .from("players")
+      .delete()
+      .eq("player_id", currentUser.id)
+      .then(() => console.log("removed all records of user in players table"))
+      .catch((error) => console.log(error));
+
+    // Fetch stats
+    const { data, error } = await supabase
+      .from("player_stats")
+      .select("avatar,total_games,username")
+      .eq("player_id", currentUser.id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching player details:", error);
+    } else if (data) {
+      setAvatar(data.avatar);
+      setTotalGames(data.total_games);
+      setUsername(data.username);
     }
   };
 
   useEffect(() => {
-    if (fetchUser.isLoaded) {
-      setUser(fetchUser.user);
-      checkIfPlayerRegistred();
-      console.log("loop");
+    if (fetchUser.isLoaded && fetchUser.user) {
+      const currentUser = fetchUser.user;
+      setUser(currentUser);
+
+      const initUser = async () => {
+        await checkIfPlayerRegistred(currentUser);
+        await fetchPlayerDetails(currentUser);
+      };
+
+      initUser();
     }
-  }, [fetchUser]);
+  }, [fetchUser.isLoaded, fetchUser.user?.id]);
 
   // Background rotation every 9 seconds
   useEffect(() => {
@@ -84,6 +121,9 @@ export default function Home() {
 
   const handleCreateRoom = () => {
     setRoomIsCreating(true);
+    const fullId = uuidv4();
+    const shortId = fullId.slice(0, 4);
+
     if (user && user.id) {
       supabase
         .from("rooms")
@@ -93,10 +133,13 @@ export default function Home() {
           round: 1,
           host_id: user.id,
         })
-        .then(() => {
+        .select() // Ensure we wait for the insert to confirm
+        .then(({ data, error }) => {
+          if (error) throw error;
           router.push(`/room/${shortId}`);
         })
         .catch((error) => {
+          console.error("Error creating room:", error);
           toast.error(error.message);
           setRoomIsCreating(false);
         });
@@ -154,36 +197,10 @@ export default function Home() {
     setJoinRoomLoading(false);
   };
 
-  useEffect(() => {
-    if (fetchUser.isLoaded && user.id) {
-      supabase
-        .from("players")
-        .delete()
-        .eq("player_id", user.id)
-        .then(() => console.log("removed all records of user in players table"))
-        .catch((error) => console.log(error));
-
-      (async () => {
-        const { data, error } = await supabase
-          .from("player_stats")
-          .select("avatar,total_games,username")
-          .eq("player_id", user.id)
-          .single();
-        if (error) {
-          console.error("Error fetching player avatar:", error);
-        } else {
-          setAvatar(data.avatar);
-          setTotalGames(data.total_games);
-          setUsername(data.username);
-        }
-      })();
-    }
-  }, [fetchUser, user?.id]);
-
   return (
     <div
       style={{
-          backgroundImage: backgrounds[currentBgIndex],
+        backgroundImage: backgrounds[currentBgIndex],
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
