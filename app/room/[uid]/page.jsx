@@ -159,6 +159,22 @@ export default function Room({ params }) {
     setQuote(quotes());
   }, []);
 
+  // Prevent accidental back navigation or refreshing
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      const message = "Are you sure you want to leave the ritual? Your presence will be lost.";
+      event.preventDefault();
+      event.returnValue = message; // Standard for most browsers
+      return message; // Legacy
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+
   // --- Event Handlers ---
   const handleKickPlayer = async (playerId) => {
     if (!roomData?.id || user.id !== roomData.host_id) return;
@@ -253,6 +269,26 @@ export default function Room({ params }) {
         </div>
       </div>
 
+      {/* Room Settings Display */}
+      {roomData && (
+        <div className="relative z-10 flex justify-center gap-6 text-stone-500 font-serif text-xs md:text-sm tracking-widest uppercase mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-stone-400">Players:</span>
+            <span className="text-stone-200">{roomData.max_players || 15}</span>
+          </div>
+          <div className="w-px h-4 bg-stone-800" />
+          <div className="flex items-center gap-2">
+            <span className="text-stone-400">Round:</span>
+            <span className="text-stone-200">{roomData.round_duration || 30}s</span>
+          </div>
+          <div className="w-px h-4 bg-stone-800" />
+          <div className="flex items-center gap-2">
+            <span className="text-stone-400">Total:</span>
+            <span className="text-stone-200">{roomData.total_rounds || 5}</span>
+          </div>
+        </div>
+      )}
+
       {/* Main Player Area */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-start pt-8 pb-32 overflow-y-auto scrollbar-hide">
         <Players
@@ -284,14 +320,16 @@ export default function Room({ params }) {
             {roomData?.host_id === user?.id && (
               <div className="flex flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto justify-center">
                 {/* Add Bot Button */}
-                <button
-                  onClick={handleAddBot}
-                  className="group relative overflow-hidden bg-stone-900 hover:bg-stone-800 border border-stone-700 hover:border-amber-700/50 text-stone-400 hover:text-amber-100 font-serif font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-sm shadow-lg transition-all duration-300 flex-1 sm:flex-none justify-center"
-                >
-                  <span className="relative z-10 flex items-center justify-center gap-2 tracking-widest uppercase text-[10px] sm:text-xs whitespace-nowrap">
-                    + Summon Bot
-                  </span>
-                </button>
+                {players.length < (roomData?.max_players || 15) && (
+                  <button
+                    onClick={handleAddBot}
+                    className="group relative overflow-hidden bg-stone-900 hover:bg-stone-800 border border-stone-700 hover:border-amber-700/50 text-stone-400 hover:text-amber-100 font-serif font-bold py-2 sm:py-3 px-4 sm:px-6 rounded-sm shadow-lg transition-all duration-300 flex-1 sm:flex-none justify-center"
+                  >
+                    <span className="relative z-10 flex items-center justify-center gap-2 tracking-widest uppercase text-[10px] sm:text-xs whitespace-nowrap">
+                      + Summon Bot
+                    </span>
+                  </button>
+                )}
 
                 {/* Start Game Button */}
                 <button

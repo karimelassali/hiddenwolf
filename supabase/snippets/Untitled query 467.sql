@@ -1,0 +1,5 @@
+-- Add new columns for room settings
+ALTER TABLE rooms 
+ADD COLUMN IF NOT EXISTS max_players INTEGER DEFAULT 15,
+ADD COLUMN IF NOT EXISTS round_duration INTEGER DEFAULT 30,
+ADD COLUMN IF NOT EXISTS total_rounds INTEGER DEFAULT 5;

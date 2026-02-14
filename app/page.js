@@ -27,6 +27,7 @@ import {
   Crown,
   BookOpen
 } from "lucide-react";
+import { CreateRoomModal } from "@/components/CreateRoomModal";
 
 export default function Home() {
   const fetchUser = useUser();
@@ -40,6 +41,7 @@ export default function Home() {
   const [totalGames, setTotalGames] = useState(0);
   const [username, setUsername] = useState("");
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [roomCode, setRoomCode] = useState("");
   const [joinRoomLoading, setJoinRoomLoading] = useState(false);
   const [joinRoomError, setJoinRoomError] = useState("");
@@ -120,6 +122,10 @@ export default function Home() {
   }, []);
 
   const handleCreateRoom = () => {
+    setShowCreateModal(true);
+  };
+
+  const handleCreateRoomSubmit = (settings) => {
     setRoomIsCreating(true);
     const fullId = uuidv4();
     const shortId = fullId.slice(0, 4);
@@ -132,6 +138,9 @@ export default function Home() {
           stage: "waiting",
           round: 1,
           host_id: user.id,
+          max_players: settings.maxPlayers,
+          round_duration: settings.roundDuration,
+          total_rounds: settings.totalRounds
         })
         .select()
         .then(({ data, error }) => {
@@ -142,6 +151,7 @@ export default function Home() {
           console.error("Error creating room:", error);
           toast.error(error.message);
           setRoomIsCreating(false);
+          setShowCreateModal(false);
         });
     }
   };
@@ -449,6 +459,13 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+
+      {/* Create Room Modal */}
+      <CreateRoomModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreateRoomSubmit}
+      />
+    </div >
   );
 }
