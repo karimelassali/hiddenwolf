@@ -10,8 +10,23 @@ import { Toaster, toast } from "react-hot-toast";
 import { Loader } from "@/components/ui/loader";
 import { Modal } from "@/components/modal";
 import { NumberCounting } from "@/components/magicui/number-ticker";
-import { BorderBeam } from "@/components/magicui/border-beam";
-import { ShineBorder } from "@/components/magicui/shine-border";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Skull,
+  Scroll,
+  GiCrownedSkull,
+  GiOpenBook,
+  GiCoins,
+  GiWolfHead,
+  GiCrossedSwords
+} from "react-icons/gi";
+import {
+  Users,
+  Trophy,
+  ShoppingBag,
+  Crown,
+  BookOpen
+} from "lucide-react";
 
 export default function Home() {
   const fetchUser = useUser();
@@ -30,10 +45,10 @@ export default function Home() {
   const [joinRoomError, setJoinRoomError] = useState("");
 
   const backgrounds = [
-    // 'url("/assets/images/background.png")',
-    'url("/assets/images/background1.avif")',
+    'url("/assets/images/background1.avif")', // Keeping original BG, can be swapped for darker one
   ];
 
+  // ... (Keep existing checkIfPlayerRegistred and fetchPlayerDetails logic unchanged) ...
   const checkIfPlayerRegistred = async (currentUser) => {
     try {
       if (currentUser?.id) {
@@ -64,7 +79,6 @@ export default function Home() {
             console.error("Error creating player data:", insertError);
             return null;
           }
-          console.log("Player data created:", insertedData);
           return insertedData;
         }
         return existingData;
@@ -76,24 +90,13 @@ export default function Home() {
   };
 
   const fetchPlayerDetails = async (currentUser) => {
-    // Remove stale player records
-    supabase
-      .from("players")
-      .delete()
-      .eq("player_id", currentUser.id)
-      .then(() => console.log("removed all records of user in players table"))
-      .catch((error) => console.log(error));
-
-    // Fetch stats
+    supabase.from("players").delete().eq("player_id", currentUser.id).catch(console.error);
     const { data, error } = await supabase
       .from("player_stats")
       .select("avatar,total_games,username")
       .eq("player_id", currentUser.id)
       .single();
-
-    if (error) {
-      console.error("Error fetching player details:", error);
-    } else if (data) {
+    if (data) {
       setAvatar(data.avatar);
       setTotalGames(data.total_games);
       setUsername(data.username);
@@ -104,17 +107,14 @@ export default function Home() {
     if (fetchUser.isLoaded && fetchUser.user) {
       const currentUser = fetchUser.user;
       setUser(currentUser);
-
       const initUser = async () => {
         await checkIfPlayerRegistred(currentUser);
         await fetchPlayerDetails(currentUser);
       };
-
       initUser();
     }
   }, [fetchUser.isLoaded, fetchUser.user?.id]);
 
-  // Background rotation every 9 seconds
   useEffect(() => {
     setCurrentBgIndex((prevIndex) => (prevIndex + 1) % backgrounds.length);
   }, []);
@@ -133,7 +133,7 @@ export default function Home() {
           round: 1,
           host_id: user.id,
         })
-        .select() // Ensure we wait for the insert to confirm
+        .select()
         .then(({ data, error }) => {
           if (error) throw error;
           router.push(`/room/${shortId}`);
@@ -157,7 +157,6 @@ export default function Home() {
       setJoinRoomError("Please enter a room code");
       return;
     }
-
     setJoinRoomLoading(true);
     setJoinRoomError("");
 
@@ -168,24 +167,18 @@ export default function Home() {
         .eq("code", roomCode.trim().toLowerCase());
 
       if (error || !data) {
-        setJoinRoomError(
-          "Room not found. Please check the code and try again."
-        );
+        setJoinRoomError("Room not found. Check the code.");
         setJoinRoomLoading(false);
         return;
       }
-
       if (data.stage === "finished") {
-        setJoinRoomError("This room has already finished.");
+        setJoinRoomError("This room has ended.");
         setJoinRoomLoading(false);
         return;
       }
-
-      // Room exists and is valid, navigate to it
       router.push(`/room/${roomCode.trim().toLowerCase()}`);
     } catch (error) {
-      console.error("Error checking room:", error);
-      setJoinRoomError("Something went wrong. Please try again.");
+      setJoinRoomError("Connection error.");
       setJoinRoomLoading(false);
     }
   };
@@ -197,17 +190,40 @@ export default function Home() {
     setJoinRoomLoading(false);
   };
 
+  // Thematic Icons for the Dark Fantasy Dock
+  const dockItems = [
+    { label: "Rules", route: "/rules", icon: BookOpen }, // Scroll/Book
+    { label: "Profile", route: "/profile", icon: Users }, // Skull/User
+    { label: "Store", route: "/store", icon: ShoppingBag }, // Potion/Bag
+    { label: "Ranking", route: "/ranking", icon: Trophy }, // Crown/Trophy
+  ];
+
   return (
-    <div
-      style={{
-        backgroundImage: backgrounds[currentBgIndex],
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        transition: "background-image 1s ease-in-out",
-      }}
-      className="w-full font-karla h-full flex flex-col relative overflow-hidden bg-gradient-to-br from-gray-950 via-slate-950 to-black"
-    >
+    <div className="relative w-full h-screen overflow-hidden bg-stone-950 font-serif selection:bg-red-900/40 selection:text-red-100">
+      <Toaster />
+
+      {/* Background Layer - Darker & Grittier */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentBgIndex}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 2 }}
+          style={{
+            backgroundImage: backgrounds[currentBgIndex],
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+          className="absolute inset-0 z-0 opacity-40 grayscale-[40%] contrast-125 saturate-50"
+        />
+      </AnimatePresence>
+
+      {/* Heavy Vignette & Texture Overlay for "Old Paper/Darkness" feel */}
+      <div className="absolute inset-0 bg-gradient-to-b from-stone-950/90 via-stone-900/60 to-stone-950/95 z-0" />
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay z-0 pointer-events-none" />
+
+      {/* Reveal Coins Modal */}
       {revealCoins && (
         <Modal
           usage="coins"
@@ -216,396 +232,223 @@ export default function Home() {
         />
       )}
 
-      {/* Join Room Modal */}
-      {showJoinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/60 -sm"
-            onClick={closeJoinModal}
-          />
+      {/* Content Container */}
+      <div className="relative z-10 flex flex-col h-full p-6 md:p-8">
 
-          {/* Modal */}
-          <div className="relative z-10 w-full max-w-md">
-            <div className="bg-gradient-to-br from-slate-900/95 via-gray-900/90 to-black/95 -xl rounded-2xl border border-gray-600/30 shadow-2xl overflow-hidden">
-              {/* Animated border */}
-              <div className="absolute inset-0 bg-gradient-to-r from-gray-600/20 via-slate-600/20 to-gray-700/20 rounded-2xl blur-xl animate-pulse" />
-
-              <div className="relative p-8">
-                {/* Header */}
-                <div className="text-center mb-8">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-gray-600 to-slate-700 rounded-full flex items-center justify-center shadow-lg">
-                    <svg
-                      className="w-8 h-8 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                      />
-                    </svg>
-                  </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    Join Room
-                  </h2>
-                  <p className="text-gray-400/80">
-                    Enter the 4-digit room code to join
-                  </p>
-                </div>
-
-                {/* Input */}
-                <div className="mb-6">
-                  <input
-                    type="text"
-                    value={roomCode}
-                    onChange={(e) => {
-                      setRoomCode(e.target.value.toUpperCase());
-                      setJoinRoomError("");
-                    }}
-                    placeholder="ABCD"
-                    maxLength={4}
-                    className="w-full px-4 py-4 bg-slate-800/50 border border-gray-600/30 rounded-xl text-white placeholder-slate-400 text-center text-2xl font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-gray-500/50 focus:border-gray-400/50 transition-all duration-300"
-                    autoFocus
-                    onKeyPress={(e) => {
-                      if (e.key === "Enter") {
-                        handleJoinRoomSubmit();
-                      }
-                    }}
-                  />
-
-                  {joinRoomError && (
-                    <div className="mt-3 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                      <p className="text-red-400 text-sm text-center flex items-center justify-center gap-2">
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        {joinRoomError}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Buttons */}
-                <div className="flex gap-3">
-                  <Button
-                    onClick={closeJoinModal}
-                    disabled={joinRoomLoading}
-                    className="flex-1 bg-slate-700/50 hover:bg-slate-600/60 text-slate-300 font-medium py-3 px-4 rounded-xl border border-slate-600/50 transition-all duration-300 hover:border-slate-500/70"
-                  >
-                    Cancel
-                  </Button>
-
-                  <Button
-                    onClick={handleJoinRoomSubmit}
-                    disabled={joinRoomLoading || !roomCode.trim()}
-                    className="flex-1 bg-gradient-to-r from-gray-700 to-slate-700 hover:from-gray-600 hover:to-slate-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg transform transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                  >
-                    {joinRoomLoading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <Loader />
-                        Joining...
-                      </span>
-                    ) : (
-                      "Join Room"
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <Toaster />
-
-      {/* Gradient overlay for better contrast */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-950/20 via-slate-950/30 to-black/40" />
-
-      {/* Main content - centered */}
-
-      <div className="flex-1 border border-red-300 flex flex-col items-center justify-center px-6 relative z-10">
-        {/* Profile Card - Center Square */}
-        <div className="relative z-10 flex flex-col bg-slate-800 items-center justify-center gap-6 p-8 -xl bg-gradient-to-br from-slate-900/60 via-gray-900/40 to-black/50 rounded-3xl border border-gray-600/20 shadow-2xl max-w-sm w-full mb-8">
-          <ShineBorder shineColor={["#64748B", "#475569", "#374151"]} />
-
-          {/* Avatar */}
-          <div className="relative">
-            <div className="w-24 h-24 bg-gradient-to-br from-gray-600 via-slate-600 to-gray-700 rounded-full p-1 shadow-2xl">
-              <div className="w-full h-full bg-slate-800 rounded-full flex items-center justify-center text-2xl font-bold text-slate-300">
+        {/* Top HUD - Minimalist Stats Only (No duplicate Branding) */}
+        <header className="flex justify-end items-start mb-4">
+          {/* Only showing User Stats to avoid duplicate logo */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-4 bg-black/40 backdrop-blur-md border border-stone-700/50 p-2 pr-6 rounded-full shadow-2xl hover:border-red-900/50 transition-colors duration-500"
+          >
+            <div className="relative">
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-stone-600 shadow-inner">
                 {avatar ? (
-                  <Image
-                    src={avatar}
-                    alt="Avatar"
-                    width={88}
-                    height={88}
-                    className="w-full h-full object-cover rounded-full"
-                  />
+                  <Image src={avatar} alt="Avatar" width={48} height={48} className="object-cover w-full h-full grayscale-[20%]" />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-700 rounded-full flex items-center justify-center text-2xl font-bold text-gray-200">
+                  <div className="w-full h-full bg-stone-800 flex items-center justify-center text-stone-400 font-bold font-serif">
                     {user?.firstName?.charAt(0) || "P"}
                   </div>
                 )}
               </div>
+              {/* Status Indicator (Green -> Red/Dim for theme) */}
+              <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-600/80 border-2 border-black rounded-full shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
             </div>
-            {/* Online indicator */}
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-gradient-to-r from-green-500 to-green-600 rounded-full border-2 border-slate-800 flex items-center justify-center">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-            </div>
-          </div>
-
-          {/* User Info */}
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-200 mb-2">
-              Welcome, {username || user?.firstName || "Player"}
-            </h2>
-            <p className="text-gray-400/70 text-sm mb-3">
-              {user?.emailAddresses?.[0]?.emailAddress}
-            </p>
-            <div className="flex items-center justify-center gap-2 text-xs text-gray-400/80">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>Online • Ready to Play</span>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="flex items-center gap-6 text-center">
             <div className="flex flex-col">
-              <span className="text-gray-200 font-bold text-lg">
-                <NumberCounting value={totalGames} />
+              <span className="text-base font-bold text-stone-200 leading-none mb-1 font-serif tracking-wide">
+                {username || user?.firstName || "Traveler"}
               </span>
-              <span className="text-gray-400/70 text-xs">Games</span>
+              <div className="flex items-center gap-3 text-xs text-stone-400 font-mono">
+                <span className="text-amber-700/80">LVL {Math.floor(totalGames / 10) + 1}</span>
+                <span className="w-px h-3 bg-stone-700/50" />
+                <span><NumberCounting value={totalGames} /> Hunts</span>
+              </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </header>
 
-        {/* Action buttons */}
-        <div className="w-full max-w-sm space-y-4">
-          <Button
-            disabled={roomIsCreating}
-            variant={"createRoom"}
+        {/* Main Action Area - Tarot Cards Layout */}
+        <main className="flex-1 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12 max-w-6xl mx-auto w-full pb-20">
+
+          {/* Card 1: Create Room (The Creator/Host) */}
+          <motion.button
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
             onClick={handleCreateRoom}
-            className="w-full bg-gradient-to-r from-gray-700 via-slate-700 to-gray-800 hover:from-gray-600 hover:via-slate-600 hover:to-gray-700 text-white font-semibold py-4 px-8 rounded-xl shadow-lg transform transition-all duration-300 hover:scale-105 border border-gray-600/30 hover:border-gray-500/50 relative overflow-hidden"
+            disabled={roomIsCreating}
+            className="group relative w-full max-w-sm md:max-w-md aspect-[3/4.5] bg-stone-900 rounded-lg overflow-hidden border border-stone-800 shadow-[0_0_0_1px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(220,38,38,0.2)] transition-all duration-500"
           >
-            {/* Button glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-gray-700/20 via-slate-700/20 to-gray-800/20 blur-xl animate-pulse" />
-            <span className="relative flex items-center justify-center gap-2">
-              {roomIsCreating ? (
-                <span className="flex items-center gap-2">
-                  <Loader />
-                  Creating Room...
-                </span>
-              ) : (
-                <>
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  Create New Room
-                </>
-              )}
-            </span>
-          </Button>
+            {/* Card Frame/Border Graphic */}
+            <div className="absolute inset-2 border border-stone-700/30 rounded flex flex-col items-center justify-between p-2 z-20 pointer-events-none group-hover:border-red-900/40 transition-colors duration-500">
+              <div className="w-full h-px bg-gradient-to-r from-transparent via-stone-700/30 to-transparent" />
+              <div className="w-full h-px bg-gradient-to-r from-transparent via-stone-700/30 to-transparent" />
+            </div>
 
-          <Button
-            variant={"dark"}
+            {/* Background Image / Texture */}
+            <div className="absolute inset-0 bg-stone-900">
+              <div className="absolute inset-0 bg-gradient-to-t from-red-950/40 to-stone-900/90 mix-blend-multiply opacity-80" />
+              {/* Animated Fog/Smoke effect could go here */}
+            </div>
+
+            {/* Center Icon/Art */}
+            <div className="relative z-10 flex flex-col items-center justify-center h-full gap-6 p-6 group-hover:-translate-y-2 transition-transform duration-500">
+              <div className="p-5 rounded-full border border-stone-700/50 bg-stone-950 shadow-2xl group-hover:border-red-900/50 transition-colors duration-500">
+                {roomIsCreating ? <Loader className="text-stone-400" /> : <GiWolfHead className="w-16 h-16 text-stone-300 group-hover:text-red-700 transition-colors duration-500" />}
+              </div>
+
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-200 tracking-widest uppercase group-hover:text-red-100 transition-colors">
+                  New Hunt
+                </h2>
+                <p className="text-stone-500 text-sm md:text-base font-serif italic max-w-[200px] mx-auto leading-relaxed group-hover:text-stone-400 transition-colors">
+                  "Gather the pack. The moon is high."
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom Label (Tarot Style) */}
+            <div className="absolute bottom-6 left-0 w-full text-center z-20">
+              <span className="text-xs font-mono text-stone-600 tracking-[0.3em] uppercase group-hover:text-stone-500 transition-colors">IV. The Host</span>
+            </div>
+          </motion.button>
+
+          {/* Card 2: Join Room (The Traveler/Guest) */}
+          <motion.button
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
             onClick={handleJoinRoom}
-            className="w-full bg-slate-800/40 hover:bg-slate-700/50 text-indigo-200 font-medium py-3 px-6 rounded-xl border border-indigo-500/20 transition-all duration-300 hover:border-indigo-400/40 -sm hover:shadow-lg hover:shadow-indigo-500/10"
+            className="group relative w-full max-w-sm md:max-w-md aspect-[3/4.5] bg-stone-900 rounded-lg overflow-hidden border border-stone-800 shadow-[0_0_0_1px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(217,119,6,0.1)] transition-all duration-500"
           >
-            <span className="flex items-center justify-center gap-2">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                />
-              </svg>
-              Join Existing Room
-            </span>
-          </Button>
-        </div>
-      </div>
+            {/* Card Frame */}
+            <div className="absolute inset-2 border border-stone-700/30 rounded flex flex-col items-center justify-between p-2 z-20 pointer-events-none group-hover:border-amber-900/30 transition-colors duration-500">
+              <div className="w-full h-px bg-gradient-to-r from-transparent via-stone-700/30 to-transparent" />
+              <div className="w-full h-px bg-gradient-to-r from-transparent via-stone-700/30 to-transparent" />
+            </div>
 
-      {/* Bottom navigation */}
-      {/* Enhanced Bottom navigation with mysterious premium feel */}
-      <div className="fixed bottom-0 left-0 w-full z-10">
-        {/* Gradient backdrop with enhanced blur */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-slate-900/80 to-transparent -2xl" />
+            {/* Background Texture */}
+            <div className="absolute inset-0 bg-stone-900">
+              <div className="absolute inset-0 bg-gradient-to-t from-stone-950 to-stone-900/80 mix-blend-multiply opacity-80" />
+            </div>
 
-        {/* Top border glow effect */}
-        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-slate-500/60 to-transparent" />
+            {/* Center Icon/Art */}
+            <div className="relative z-10 flex flex-col items-center justify-center h-full gap-6 p-6 group-hover:-translate-y-2 transition-transform duration-500">
+              <div className="p-5 rounded-full border border-stone-700/50 bg-stone-950 shadow-2xl group-hover:border-amber-900/40 transition-colors duration-500">
+                <GiCrossedSwords className="w-16 h-16 text-stone-300 group-hover:text-amber-700 transition-colors duration-500" />
+              </div>
 
-        <div className="relative p-6 pb-8">
-          <div className="flex items-center justify-center gap-3 max-w-2xl mx-auto">
-            {[
-              {
-                label: "Rules",
-                route: "/rules",
-                icon: (
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                ),
-                activeColor: "from-blue-600/20 to-blue-800/20",
-                hoverShadow: "hover:shadow-blue-500/10",
-              },
-              {
-                label: "Profile",
-                route: "/profile",
-                icon: (
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                ),
-                activeColor: "from-purple-600/20 to-purple-800/20",
-                hoverShadow: "hover:shadow-purple-500/10",
-              },
-              {
-                label: "Store",
-                route: "/store",
-                icon: (
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 3h2l.4 2M7 13h10l4-8H5.4m-2.4 0L3 3H1m6 16a2 2 0 104 0 2 2 0 00-4 0zm10 0a2 2 0 104 0 2 2 0 00-4 0z"
-                    />
-                  </svg>
-                ),
-                activeColor: "from-green-600/20 to-green-800/20",
-                hoverShadow: "hover:shadow-green-500/10",
-              },
-              {
-                label: "Ranking",
-                route: "/ranking",
-                icon: (
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                    />
-                  </svg>
-                ),
-                activeColor: "from-yellow-600/20 to-yellow-800/20",
-                hoverShadow: "hover:shadow-yellow-500/10",
-              },
-              {
-                label: "Shopping",
-                route: "/pricing",
-                icon: (
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                    />
-                  </svg>
-                ),
-                activeColor: "from-red-600/20 to-red-800/20",
-                hoverShadow: "hover:shadow-red-500/10",
-              },
-            ].map((item, index) => (
-              <Button
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-200 tracking-widest uppercase group-hover:text-amber-100 transition-colors">
+                  Join Pack
+                </h2>
+                <p className="text-stone-500 text-sm md:text-base font-serif italic max-w-[200px] mx-auto leading-relaxed group-hover:text-stone-400 transition-colors">
+                  "Answer the call. Your fate awaits."
+                </p>
+              </div>
+            </div>
+
+            {/* Bottom Label */}
+            <div className="absolute bottom-6 left-0 w-full text-center z-20">
+              <span className="text-xs font-mono text-stone-600 tracking-[0.3em] uppercase group-hover:text-stone-500 transition-colors">VII. The Pack</span>
+            </div>
+          </motion.button>
+        </main>
+
+        {/* Bottom Navigation - "Inventory/Rune" Style */}
+        <motion.div
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg"
+        >
+          <div className="flex items-center justify-center gap-6 md:gap-8 p-4 bg-stone-950/80 backdrop-blur-md border border-stone-800 rounded-full shadow-2xl shadow-black">
+            {dockItems.map((item, index) => (
+              <button
                 key={index}
-                variant={"dark"}
                 onClick={() => router.push(item.route)}
-                className={`group relative flex flex-col items-center overflow-hidden flex-1 min-w-[70px] bg-gradient-to-b from-slate-800/30 to-slate-900/50 hover:from-slate-700/40 hover:to-slate-800/60 text-slate-300 hover:text-white font-medium p-3 rounded-2xl border border-slate-600/30 hover:border-slate-500/50 transition-all duration-500 hover:scale-110 hover:-translate-y-2 -xl shadow-lg ${item.hoverShadow}`}
+                className="group relative flex flex-col items-center justify-center gap-1 min-w-[3rem] transition-all duration-300 hover:-translate-y-1"
               >
-                {/* Hover background gradient */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-b ${item.activeColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl`}
-                />
-
-                {/* Subtle inner glow */}
-                <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
-
-                {/* Content with proper spacing */}
-                <span className="relative flex  items-center justify-center gap-3 z-10 h-full min-h-[60px]">
-                  <div className="group-hover:scale-125 transition-transform duration-300 flex items-center justify-center">
-                    {item.icon}
-                  </div>
-                  <span className="text-xs max-sm:hidden font-semibold tracking-wide group-hover:text-white transition-colors duration-300 text-center leading-tight">
-                    {item.label}
-                  </span>
+                <div className="text-stone-500 group-hover:text-stone-200 transition-colors duration-300">
+                  <item.icon size={22} className="opacity-70 group-hover:opacity-100" />
+                </div>
+                <span className="text-[10px] font-serif tracking-wider text-stone-600 group-hover:text-stone-400 uppercase transition-colors">
+                  {item.label}
                 </span>
-
-                {/* Bottom indicator line */}
-                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-0 h-0.5 bg-gradient-to-r from-slate-400 to-slate-500 group-hover:w-8 transition-all duration-500 rounded-full" />
-              </Button>
+                {/* Glow dot on hover */}
+                <div className="absolute -bottom-2 w-1 h-1 rounded-full bg-red-900/0 group-hover:bg-red-700/80 transition-all duration-300" />
+              </button>
             ))}
           </div>
-
-          {/* Bottom safe area for mobile devices */}
-          <div className="h-2" />
-        </div>
+        </motion.div>
       </div>
+
+      {/* Join Room Modal - Thematic Update */}
+      <AnimatePresence>
+        {showJoinModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={closeJoinModal} />
+
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative w-full max-w-md bg-stone-900 border border-stone-700/50 rounded-lg p-8 shadow-2xl"
+            >
+              <div className="text-center mb-8">
+                <GiCrownedSkull className="w-12 h-12 text-stone-500 mx-auto mb-4" />
+                <h3 className="text-2xl font-serif font-bold text-stone-200 uppercase tracking-widest">Enter Code</h3>
+                <p className="text-stone-500 font-serif italic text-sm">"Speak the cipher to enter."</p>
+              </div>
+
+              <div className="space-y-6">
+                <input
+                  type="text"
+                  value={roomCode}
+                  onChange={(e) => {
+                    setRoomCode(e.target.value.toUpperCase());
+                    setJoinRoomError("");
+                  }}
+                  placeholder="ABCD"
+                  maxLength={4}
+                  className="w-full bg-stone-950 border-b-2 border-stone-800 text-stone-200 text-center text-3xl font-mono tracking-[0.5em] py-4 focus:outline-none focus:border-red-900 transition-colors uppercase placeholder:text-stone-800"
+                  autoFocus
+                  onKeyPress={(e) => e.key === "Enter" && handleJoinRoomSubmit()}
+                />
+
+                {joinRoomError && (
+                  <div className="text-red-800/80 text-sm font-serif text-center italic">
+                    {joinRoomError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Button
+                    onClick={closeJoinModal}
+                    className="bg-transparent hover:bg-stone-800 text-stone-500 border border-stone-800 hover:text-stone-300 font-serif uppercase tracking-wider"
+                  >
+                    Retreat
+                  </Button>
+                  <Button
+                    onClick={handleJoinRoomSubmit}
+                    disabled={joinRoomLoading || !roomCode}
+                    className="bg-stone-800 hover:bg-red-950 text-stone-300 hover:text-red-100 border border-stone-700/50 font-serif uppercase tracking-wider"
+                  >
+                    {joinRoomLoading ? <Loader /> : "Enter"}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
