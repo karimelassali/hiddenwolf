@@ -54,11 +54,19 @@ const GameBox = dynamic(() => import("@/components/gameBox"), {
   ssr: false,
 });
 
-const RoleRevealModal = dynamic(() => import("@/components/ui/rolesModal"), {
+const NewRoleCard = dynamic(() => import("@/components/ui/NewRoleCard"), {
+  ssr: false,
+});
+
+const TurnTimer = dynamic(() => import("@/components/ui/TurnTimer"), {
   ssr: false,
 });
 
 const StageResult = dynamic(() => import("@/components/ui/stageResult"), {
+  ssr: false,
+});
+
+const RoleAssignmentView = dynamic(() => import("@/components/RoleAssignmentView"), {
   ssr: false,
 });
 
@@ -75,10 +83,12 @@ export default function Game({ params }) {
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
   const [nightResult, setNightResult] = useState(null);
   const [dayResult, setDayResult] = useState(null);
+  const [gameStartCountdown, setGameStartCountdown] = useState(0);
 
   const hasShownRoleModal = useRef(false);
   const prevStageRef = useRef();
   const playersAtStageStart = useRef([]);
+  const rolesAssignedTime = useRef(0);
 
   // Enhanced mobile view state with better breakpoint handling
   const [mobileView, setMobileView] = useState("game");
@@ -135,32 +145,32 @@ export default function Game({ params }) {
           .select("*")
           .eq("code", uid)
           .single();
-        
+
         if (roomError || !room) {
           console.error("Error fetching room", roomError);
           toast.error("Failed to load game room");
           return;
         }
-        
+
         setRoomData(room);
         prevStageRef.current = room.stage;
-        
+
         if (user) {
           await upsertPlayer(room.id, user);
         }
-        
+
         const { data: initialPlayers, error: playersError } = await supabase
           .from("players")
           .select("*")
           .eq("room_id", room.id)
           .order("id", { ascending: true });
-          
+
         if (playersError) {
           console.error("Error fetching players", playersError);
           toast.error("Failed to load players");
           return;
         }
-        
+
         setPlayers(initialPlayers);
         playersAtStageStart.current = initialPlayers;
       } catch (error) {
@@ -168,7 +178,7 @@ export default function Game({ params }) {
         toast.error("Failed to initialize game");
       }
     };
-    
+
     if (isLoaded) {
       initializeGame();
     }
@@ -177,7 +187,7 @@ export default function Game({ params }) {
   // --- Real-time Subscriptions ---
   useEffect(() => {
     if (!roomData?.id) return;
-    
+
     const playersSubscription = supabase
       .channel(`game-players-${roomData.id}`)
       .on(
@@ -231,7 +241,7 @@ export default function Game({ params }) {
         }
       )
       .subscribe();
-      
+
     return () => {
       supabase.removeChannel(playersSubscription);
       supabase.removeChannel(roomSubscription);
@@ -255,7 +265,7 @@ export default function Game({ params }) {
       );
       return () => clearInterval(interval);
     }
-  }, [roomData?.id, user?.id]);
+  }, [roomData?.id, user?.id, roomData?.host_id]);
 
   useEffect(() => {
     if (roomData?.sound === "howl") {
@@ -275,40 +285,87 @@ export default function Game({ params }) {
     const bots = currentPlayers.filter((p) => !p.is_human);
     bots.forEach(async (bot) => {
       if (bot.is_action_done || !bot.is_alive) return;
-      
+
       const alivePlayers = currentPlayers.filter((p) => p.is_alive);
       const potentialTargets = alivePlayers.filter((p) => p.id !== bot.id);
-      
+
       if (potentialTargets.length === 0) return;
-      
+
       const randomTarget =
         potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
-      
+
       try {
         if (roomData.stage === "day") {
           await voting(bot, randomTarget);
           await messaging(bot, roomData.id, currentPlayers, randomTarget);
         } else if (roomData.stage === "night") {
+          // --- Timer Configuration (New Logic) ---
+          const NIGHT_DURATION = (roomData.round_duration || 20) * 1000; // Default 20s
+          const WOLF_DELAY = Math.max(0, NIGHT_DURATION - 3000); // 3 seconds before end
+          const OTHER_BOT_DELAY = Math.floor(Math.random() * (NIGHT_DURATION / 2)) + 1000;
+
+          const timeSinceAssignment = Date.now() - rolesAssignedTime.current;
+          const SAFETY_BUFFER = 15000;
+
+          let actionDelay = bot.role === "wolf" ? WOLF_DELAY : OTHER_BOT_DELAY;
+
+          if (timeSinceAssignment < SAFETY_BUFFER && roomData.round === 1) {
+            const remainingSafety = SAFETY_BUFFER - timeSinceAssignment;
+            actionDelay = Math.max(actionDelay, remainingSafety + 1000);
+          }
+          console.log(`🤖 Bot ${bot.role} scheduled in ${actionDelay}ms`);
+
           setTimeout(async () => {
             const { data: updatedPlayers } = await supabase
               .from('players')
               .select('*')
               .eq('room_id', roomData.id);
-              
+
             const currentAlivePlayers = updatedPlayers.filter((p) => p.is_alive);
-            const currentTargets = currentAlivePlayers.filter(
+            let currentTargets = currentAlivePlayers.filter(
               (p) => p.id !== bot.id
             );
-            
+
+            // --- DEBUG: Log all potential targets and their humanity ---
+            console.log("🐺 Wolf calculating targets:", currentTargets.map(p => ({
+              id: p.id,
+              player_id: p.player_id,
+              name: p.name,
+              is_human: p.is_human,
+              user_id_match: p.player_id === user?.id
+            })));
+
+            // --- IMMUNITY: Wolves ignore humans on First Night ---
+            // Priority: User requested to bring back bot actions on first round.
+            if (false && bot.role === "wolf") {
+              const nonHumanTargets = currentTargets.filter(p => !p.is_human && p.player_id !== user?.id);
+
+              if (nonHumanTargets.length > 0) {
+                console.log(`🛡️ First Night Immunity: Wolf ${bot.name} ignoring humans. New targets:`, nonHumanTargets.map(t => t.name));
+                currentTargets = nonHumanTargets;
+              } else {
+                console.warn(`⚠️ First Night Immunity: No non-human targets left. Immunity bypassed.`);
+              }
+            }
+
             if (currentTargets.length === 0) return;
-            
+
             const finalTarget =
               currentTargets[Math.floor(Math.random() * currentTargets.length)];
-              
-            if (bot.role === "wolf") await kill(bot, finalTarget, roomData.id);
+
+            if (bot.role === "wolf") {
+              // --- Wolf Logic: Check if doctor saved anyone ---
+              const anyoneSaved = updatedPlayers.some(p => p.is_saved);
+              if (!anyoneSaved) {
+                console.log(`🐺 Wolf attacking ${finalTarget.name} (No saves detected)`);
+                await kill(bot, finalTarget, roomData.id);
+              } else {
+                console.log(`🐺 Wolf Holds Back: Someone was saved by the Doctor.`);
+              }
+            }
             else if (bot.role === "seer") await seePlayer(bot, finalTarget);
             else if (bot.role === "doctor") await savePlayer(bot, finalTarget);
-          }, Math.floor(Math.random() * 7000) + 1000);
+          }, actionDelay);
         }
       } catch (error) {
         console.error("Bot action error:", error);
@@ -370,7 +427,7 @@ export default function Game({ params }) {
                   .update({ round: roomData.round + 1 })
                   .eq("id", roomData.id);
               }
-              
+
               const playerUpdatePromises = currentPlayers.map((p) => {
                 const updateData = { is_action_done: false };
                 if (roomData.stage === "night") {
@@ -398,6 +455,21 @@ export default function Game({ params }) {
 
     processStageChange();
   }, [roomData?.stage, roomData?.id, roomData?.host_id, user?.id, roomData?.round]);
+
+  // --- Game Start Countdown Logic ---
+  useEffect(() => {
+    // Trigger countdown when roles are first assigned (round 1, night stage)
+    if (roomData?.roles_assigned && roomData?.round === 1 && roomData?.stage === "night" && !hasShownRoleModal.current) {
+      setGameStartCountdown(5);
+    }
+  }, [roomData?.roles_assigned, roomData?.round, roomData?.stage]);
+
+  useEffect(() => {
+    if (gameStartCountdown > 0) {
+      const timer = setTimeout(() => setGameStartCountdown(prev => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [gameStartCountdown]);
 
   // --- Main Game Logic (Winner Check & Role Modal) ---
   useEffect(() => {
@@ -466,23 +538,37 @@ export default function Game({ params }) {
       const playerUpdates = players.map((player, i) => ({
         ...player,
         role: shuffled[i],
+        is_alive: true,
+        is_action_done: false,
+        is_saved: false,
+        dying_method: null,
+        voted_to: null,
+        last_seen_role: null,
       }));
-      
+
+      // Optimistic update for players
+      setPlayers(prev => prev.map((player, i) => ({ ...player, role: shuffled[i] })));
+
+      // --- Track assignment time for bot safety ---
+      rolesAssignedTime.current = Date.now();
+      console.log(`🎲 Roles Assigned at ${rolesAssignedTime.current} (Safety until ${rolesAssignedTime.current + 15000})`);
+
       const { error: playerError } = await supabase
         .from("players")
         .upsert(playerUpdates);
-        
+
       if (playerError) {
         toast.error("Failed to assign roles.");
         return;
       }
-      
+
+      // Optimistic update for room data - force UI transition immediately
+      setRoomData((prev) => ({ ...prev, roles_assigned: true, stage: "night", round: 1 }));
+
       await supabase
         .from("rooms")
         .update({ roles_assigned: true, stage: "night", sound: "howl", round: 1 })
         .eq("id", roomData.id);
-        
-      setRoomData((prev) => ({ ...prev, roles_assigned: true, stage: "night" }));
     } catch (error) {
       console.error("Apply roles error:", error);
       toast.error("Failed to apply roles");
@@ -503,46 +589,11 @@ export default function Game({ params }) {
   // --- Role Assignment Screen ---
   if (!roomData.roles_assigned) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-        <motion.div
-          initial={{ scale: 0.8, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          className="bg-gradient-to-br from-slate-800 to-slate-900 p-6 lg:p-8 rounded-2xl shadow-2xl border border-slate-700/50 max-w-md w-full text-center"
-        >
-          {user?.id === roomData.host_id ? (
-            <>
-              <GiWolfHowl className="text-purple-400 text-4xl sm:text-5xl lg:text-6xl mx-auto mb-4" />
-              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-200 mb-2">
-                Ready to Assign Roles?
-              </h3>
-              <p className="text-slate-400 mb-6 text-sm lg:text-base">
-                Distribute roles to all players to begin the game.
-              </p>
-              <div className="mb-6">
-                <AnimatedTooltipPeople people={players} />
-              </div>
-              <motion.button
-                onClick={ApplyingRoles}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-colors text-sm sm:text-base"
-              >
-                Apply Roles & Start Game
-              </motion.button>
-            </>
-          ) : (
-            <>
-              <FaHourglass className="text-amber-400 text-4xl sm:text-5xl mx-auto mb-4 animate-spin" />
-              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-200 mb-3">
-                Please Wait
-              </h3>
-              <p className="text-slate-400 text-sm sm:text-base lg:text-lg">
-                The host is assigning roles...
-              </p>
-            </>
-          )}
-        </motion.div>
-      </div>
+      <RoleAssignmentView
+        isHost={user?.id === roomData.host_id}
+        players={players}
+        onAssignRoles={ApplyingRoles}
+      />
     );
   }
 
@@ -565,7 +616,8 @@ export default function Game({ params }) {
 
       <AnimatePresence>
         {isRoleModalOpen && currentPlayer?.role && (
-          <RoleRevealModal
+          <NewRoleCard
+            key="role-reveal-modal"
             role={currentPlayer.role}
             onClose={() => setIsRoleModalOpen(false)}
           />
@@ -573,10 +625,39 @@ export default function Game({ params }) {
 
         {nightResult && (
           <StageResult
+            key="stage-result-modal"
             result={nightResult}
             onClose={() => setNightResult(null)}
             type="night"
           />
+        )}
+
+        {/* Game Start Countdown Overlay */}
+        {gameStartCountdown > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-auto"
+          >
+            <div className="absolute inset-0 bg-transparent z-[90]" /> {/* Block clicks */}
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              key={gameStartCountdown}
+              className="flex flex-col items-center justify-center z-[91] relative gap-6"
+            >
+              <TurnTimer duration={5} onComplete={() => { }} stage="night" />
+              <div className="text-center">
+                <h2 className="text-4xl md:text-6xl font-serif font-black text-amber-500 mb-2 tracking-widest uppercase drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
+                  Prepare
+                </h2>
+                <p className="text-slate-400 font-serif italic text-lg animate-pulse">
+                  The Night Descends...
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
 
         {dayResult && (
@@ -614,13 +695,13 @@ export default function Game({ params }) {
                   />
                 </div>
               )}
-              
+
               {mobileView === "players" && (
                 <div className="h-full overflow-hidden">
                   <SidePlayers players={players} />
                 </div>
               )}
-              
+
               {mobileView === "chat" && (
                 <div className="h-full flex flex-col">
                   {roomData.stage === "day" && currentPlayer?.is_alive ? (

@@ -1,8 +1,9 @@
 import { supabase } from '@/lib/supabase';
 
-export async function trackUserConnectivity(roomId, userId, roomHosterId) {
+// Remove async from the exported function so it returns the interval ID synchronously
+export function trackUserConnectivity(roomId, userId, roomHosterId) {
   const interval = setInterval(async () => {
-    // ✅ تحديث آخر ظهور للمستخدم الحالي
+    // ✅ Update last seen for current user
     await supabase
       .from('players')
       .update({ last_seen: new Date().toISOString() })
@@ -10,7 +11,7 @@ export async function trackUserConnectivity(roomId, userId, roomHosterId) {
 
     console.log('last seen updated');
 
-    // ✅ الحصول على اللاعبين غير النشطين
+    // ✅ Get inactive players
     const { data: inactivePlayers, error } = await supabase
       .from('players')
       .select('id, player_id, is_human')
@@ -20,14 +21,14 @@ export async function trackUserConnectivity(roomId, userId, roomHosterId) {
     if (inactivePlayers?.length) {
       const idsToRemove = inactivePlayers.map((p) => p.id);
 
-      // ✅ تحقق هل أحدهم هو الـ Host الحالي
+      // ✅ Check if host is kicked
       const isHostKicked = inactivePlayers.some((p) => p.player_id === roomHosterId);
 
-      // ✅ حذف اللاعبين غير النشطين
+      // ✅ Remove inactive players
       await supabase.from('players').delete().in('id', idsToRemove);
       console.log('🧹 removed inactive players:', idsToRemove);
 
-      // ✅ تغيير المالك إذا كان قد تم طرده
+      // ✅ Reassign host if needed
       if (isHostKicked) {
         const { data: remainingPlayers } = await supabase
           .from('players')
@@ -54,4 +55,6 @@ export async function trackUserConnectivity(roomId, userId, roomHosterId) {
       }
     }
   }, 5000);
+
+  return interval; // CRITICAL: Return interval ID for cleanup
 }
