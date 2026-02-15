@@ -30,16 +30,8 @@ export default function TurnTimer({ duration, onComplete, stage }) {
 
     // Determine colors based on urgency
     let strokeColor = "stroke-emerald-500";
-    let textColor = "text-emerald-400";
-
-    if (timeLeft <= 10) {
-        strokeColor = "stroke-amber-500";
-        textColor = "text-amber-400";
-    }
-    if (timeLeft <= 5) {
-        strokeColor = "stroke-red-600";
-        textColor = "text-red-500";
-    }
+    if (timeLeft <= 10) strokeColor = "stroke-amber-500";
+    if (timeLeft <= 5) strokeColor = "stroke-red-600";
 
     return (
         <div className="relative flex items-center justify-center w-16 h-16">
@@ -71,9 +63,15 @@ export default function TurnTimer({ duration, onComplete, stage }) {
                     className={`${strokeColor} transition-all duration-1000 ease-linear`}
                 />
             </svg>
-            <div className={`absolute font-mono font-bold text-lg ${textColor}`}>
-                {timeLeft}
-            </div>
+
+            {/* Pulse when critical — no number */}
+            {timeLeft <= 5 && (
+                <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-red-500/50"
+                    animate={{ scale: [1, 1.3], opacity: [0.6, 0] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                />
+            )}
         </div>
     );
 }

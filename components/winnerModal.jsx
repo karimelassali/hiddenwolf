@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
-import { FaTrophy, FaSkull, FaCrown, FaHome, FaUsers } from "react-icons/fa";
+import { FaTrophy, FaSkull, FaCrown, FaHome, FaUsers, FaArrowRight } from "react-icons/fa";
 import { GiVillage } from "react-icons/gi";
 import { Countdown } from "./ui/countdown";
 import { updatePlayerState } from "@/utils/updatePlayerState";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {Modal} from "./modal";
-import {WinSound,LoseSound} from "@/utils/sounds";
+import { Modal } from "./modal";
+import { WinSound, LoseSound } from "@/utils/sounds";
 
 export default function GameWinner({
   winner,
@@ -14,32 +14,31 @@ export default function GameWinner({
   clerkId,
   currentPlayerRole,
 }) {
-  const isWolfWin = winner?.role.toLowerCase().includes("wolf");
-  const isVillageWin = winner?.role.toLowerCase().includes("villager");
-
+  const isWolfWin = winner?.role?.toLowerCase().includes("wolf");
+  const isVillageWin = winner?.role?.toLowerCase().includes("villager");
+  const [activeTab, setActiveTab] = useState("overview"); // 'overview' | 'roster'
   const [playerStateUpdated, setPlayerStateUpdated] = useState(false);
-
-  const [prize,setPrize] = useState(0);
+  const [prize, setPrize] = useState(0);
 
   const router = useRouter();
 
   useEffect(() => {
     if (playerStateUpdated) return;
     try {
-
       const isCurrentUserWon =
         (winner.role === "wolf" && currentPlayerRole === "wolf") ||
         (winner.role !== "wolf" && currentPlayerRole !== "wolf");
-        const prizeAmount = ['10','20','30','40','50','60','70','80','90','100'];
-        const randomPrize = prizeAmount[Math.floor(Math.random() * prizeAmount.length)];
-      if(isCurrentUserWon){
+
+      const prizeAmount = ['10', '20', '30', '40', '50', '60', '70', '80', '90', '100'];
+      const randomPrize = prizeAmount[Math.floor(Math.random() * prizeAmount.length)];
+
+      if (isCurrentUserWon) {
         setPrize(randomPrize);
         WinSound();
-      }else{
+      } else {
         LoseSound();
       }
-        
-      
+
       updatePlayerState(clerkId, { win: isCurrentUserWon, prize: isCurrentUserWon ? randomPrize : null });
       setPlayerStateUpdated(true);
     } catch (error) {
@@ -47,150 +46,157 @@ export default function GameWinner({
     }
   }, [winner]);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="fixed top-0 left-0 w-full h-full  backdrop-blur-lg z-50 flex items-center justify-center"
-    >
-      {
-        prize > 0 && (
-          <Modal usage={'coins'} prop={prize} onCloseModal={() => setPrize(0)} />
-        )
-      }
-      <motion.div
-        initial={{ scale: 0.5, y: 50, opacity: 0 }}
-        animate={{ scale: 1, y: 0, opacity: 1 }}
-        transition={{ type: "spring", damping: 15, stiffness: 300 }}
-        className={`relative max-w-[50%] lg:max-w-[30%] mx-4 p-8 rounded-2xl shadow-2xl border overflow-hidden ${
-          isWolfWin
-            ? "bg-gradient-to-br from-red-900 to-red-800 border-red-600/50"
-            : isVillageWin
-            ? "bg-gradient-to-br from-emerald-900 to-emerald-800 border-emerald-600/50"
-            : "bg-gradient-to-br from-slate-800 to-slate-900 border-slate-600/50"
-        }`}
-      >
-        {/* Animated background particles */}
-        <div className="absolute inset-0 overflow-hidden">
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 100, x: Math.random() * 400 }}
-              animate={{
-                opacity: [0, 1, 0],
-                y: -100,
-                x: Math.random() * 400,
-              }}
-              transition={{
-                duration: 3,
-                delay: Math.random() * 2,
-                repeat: Infinity,
-                repeatDelay: Math.random() * 3,
-              }}
-              className={`absolute w-1 h-1 rounded-full ${
-                isWolfWin ? "bg-red-400" : "bg-emerald-400"
-              }`}
-            />
-          ))}
-        </div>
+  // Color config based on winner
+  const theme = isWolfWin
+    ? {
+      bg: "from-red-950 via-gray-900 to-black",
+      border: "border-red-800",
+      shadow: "shadow-red-900/50",
+      text: "text-red-100",
+      highlight: "text-red-500",
+      button: "bg-red-700 hover:bg-red-600",
+      gradient: "from-red-900 to-red-800"
+    }
+    : {
+      bg: "from-emerald-950 via-gray-900 to-black",
+      border: "border-emerald-800",
+      shadow: "shadow-emerald-900/50",
+      text: "text-emerald-100",
+      highlight: "text-emerald-500",
+      button: "bg-emerald-700 hover:bg-emerald-600",
+      gradient: "from-emerald-900 to-emerald-800"
+    };
 
-        {/* Header Section */}
-        <div className="text-center mb-6 relative z-10">
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in duration-500">
+      {prize > 0 && (
+        <Modal usage={'coins'} prop={prize} onCloseModal={() => setPrize(0)} />
+      )}
+
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 50 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        transition={{ type: "spring", damping: 20 }}
+        className={`relative w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col md:flex-row rounded-3xl border-2 ${theme.border} ${theme.shadow} shadow-2xl bg-gray-900`}
+      >
+        {/* --- LEFT SIDE: VICTORY BANNER --- */}
+        <div className={`md:w-5/12 p-8 flex flex-col items-center justify-center text-center relative overflow-hidden bg-gradient-to-br ${theme.gradient}`}>
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')]"></div>
+
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
-            transition={{ delay: 0.3, type: "spring" }}
-            className={`w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center shadow-lg ${
-              isWolfWin
-                ? "bg-gradient-to-br from-red-600 to-red-700 shadow-red-500/50"
-                : isVillageWin
-                ? "bg-gradient-to-br from-emerald-600 to-emerald-700 shadow-emerald-500/50"
-                : "bg-gradient-to-br from-amber-600 to-amber-700 shadow-amber-500/50"
-            }`}
+            transition={{ delay: 0.2, type: "spring" }}
+            className="relative z-10 w-32 h-32 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center mb-6 border-4 border-white/10 shadow-xl"
           >
-            {isWolfWin ? (
-              <FaSkull className="text-3xl text-white" />
-            ) : isVillageWin ? (
-              <FaUsers className="text-3xl text-white" />
-            ) : (
-              <FaTrophy className="text-3xl text-white" />
-            )}
+            {isWolfWin ? <FaSkull className="text-6xl text-red-200" /> : <FaUsers className="text-6xl text-emerald-200" />}
           </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="text-3xl font-bold text-white mb-2"
-          >
-            Game Over!
-          </motion.h1>
+          <h1 className="relative z-10 text-4xl md:text-5xl font-black text-white tracking-tight leading-tight uppercase drop-shadow-lg mb-2">
+            {isWolfWin ? "Wolves Win" : "Village Saved"}
+          </h1>
+
+          <p className="relative z-10 text-white/80 font-medium text-lg mb-8">
+            {isWolfWin ? "Darkness consumes the village." : "The evil has been purged."}
+          </p>
 
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.7 }}
-            className={`inline-flex items-center min-w-[50%] gap-2 px-4 py-2 rounded-full font-bold text-lg ${
-              isWolfWin
-                ? "bg-red-600/30 text-red-200 border border-red-500/50"
-                : isVillageWin
-                ? "bg-emerald-600/30 text-emerald-200 border border-emerald-500/50"
-                : "bg-amber-600/30 text-amber-200 border border-amber-500/50"
-            }`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+            className="mt-auto"
           >
-            <FaCrown className="text-sm" />
-            {winner.role === "wolf"
-              ? `Wolf Won (${winner.name})`
-              : `Villagers Win`}
+            <button
+              onClick={() => router.push("/")}
+              className="group relative w-full py-4 bg-black/40 hover:bg-black/60 backdrop-blur-md rounded-xl text-white font-bold transition-all border border-white/10 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform"></div>
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <FaHome /> Return to Lobby
+              </span>
+            </button>
           </motion.div>
         </div>
 
-        {/* Countdown Section */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.9 }}
-          className="text-center mb-6"
-        >
-          <p className="text-slate-300 mb-3">Redirecting to home in:</p>
-          {/* <Countdown number='90' target='/' /> */}
-        </motion.div>
+        {/* --- RIGHT SIDE: DETAILED STATS --- */}
+        <div className="md:w-7/12 bg-gray-900 flex flex-col">
+          {/* Header Tabs */}
+          <div className="flex border-b border-gray-800">
+            <button
+              onClick={() => setActiveTab("overview")}
+              className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'overview' ? 'text-white bg-gray-800 border-b-2 border-purple-500' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab("roster")}
+              className={`flex-1 py-4 text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === 'roster' ? 'text-white bg-gray-800 border-b-2 border-purple-500' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              Player Roster
+            </button>
+          </div>
 
-        {/* Action Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.1 }}
-          className="text-center"
-        >
-          <button
-            onClick={() => router.push("/")}
-            className="group w-full relative overflow-hidden bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 border border-slate-600/50 hover:shadow-xl hover:scale-105"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-            <span className="relative flex items-center justify-center gap-3">
-              <FaHome className="text-lg" />
-              <span className="text-lg">Return Home</span>
-            </span>
-          </button>
-        </motion.div>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            {activeTab === "overview" && (
+              <div className="space-y-6">
+                <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                  <h3 className="text-gray-400 text-xs font-bold uppercase mb-2">Winning Team</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {winner.players.map(p => (
+                      <div key={p.id} className="flex items-center gap-2 bg-gray-700 rounded-full px-3 py-1">
+                        <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-600">
+                          <img src={p.profile || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`} className="w-full h-full object-cover" />
+                        </div>
+                        <span className="text-white text-sm font-medium">{p.name}</span>
+                        {p.is_alive && <FaCrown className="text-yellow-400 text-xs" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-        {/* Decorative elements */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className={`absolute -top-10 -right-10 w-20 h-20 rounded-full opacity-20 ${
-            isWolfWin ? "bg-red-500" : "bg-emerald-500"
-          }`}
-        />
-        <motion.div
-          animate={{ rotate: -360 }}
-          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-          className={`absolute -bottom-10 -left-10 w-16 h-16 rounded-full opacity-20 ${
-            isWolfWin ? "bg-red-600" : "bg-emerald-600"
-          }`}
-        />
+                <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                  <h3 className="text-gray-400 text-xs font-bold uppercase mb-2">Defeated Team</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {winner.enemy.map(p => (
+                      <div key={p.id} className="flex items-center gap-2 bg-gray-700/50 rounded-full px-3 py-1 opacity-70 grayscale">
+                        <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-600">
+                          <img src={p.profile || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`} className="w-full h-full object-cover" />
+                        </div>
+                        <span className="text-gray-300 text-sm font-medium">{p.name}</span>
+                        {!p.is_alive && <FaSkull className="text-gray-500 text-xs" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "roster" && (
+              <div className="space-y-2">
+                {[...winner.players, ...winner.enemy].sort((a, b) => a.name.localeCompare(b.name)).map((player) => (
+                  <div key={player.id} className="flex items-center justify-between p-3 bg-gray-800/40 rounded-lg hover:bg-gray-800/80 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-gray-700">
+                        <img src={player.profile || `https://api.dicebear.com/7.x/avataaars/svg?seed=${player.name}`} className="w-full h-full object-cover" />
+                      </div>
+                      <div>
+                        <p className="text-white font-bold">{player.name}</p>
+                        <p className="text-xs text-gray-400 uppercase tracking-widest">{player.role}</p>
+                      </div>
+                    </div>
+
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${player.is_alive ? 'bg-green-900/50 text-green-400 border border-green-800' : 'bg-red-900/50 text-red-400 border border-red-800'}`}>
+                      {player.is_alive ? "SURVIVOR" : "DECEASED"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </motion.div>
-    </motion.div>
+    </div>
   );
 }

@@ -11,8 +11,8 @@ import {
   GiDeathSkull,
   GiTiedScroll,
 } from "react-icons/gi";
-import {motion} from "framer-motion";
-export default function StageResult ({ result, onClose, type }) {
+import { motion } from "framer-motion";
+export default function StageResult({ result, onClose, type }) {
   const isNight = type === "night";
 
   const content = {
@@ -22,28 +22,28 @@ export default function StageResult ({ result, onClose, type }) {
       scenarios: {
         killed: {
           icon: <GiDeathSkull className="text-red-500" />,
-          message: (name) => (
+          message: (details) => (
             <>
-              <span className="font-bold text-red-400">{name}</span> was killed
-              in the night.
+              <span className="font-bold text-red-400">{details.name}</span> was brutally killed
+              by the Wolf.
             </>
           ),
-          description: "The village mourns a loss.",
+          description: "The village mourns a grievous loss.",
         },
         saved: {
           icon: <GiHeartShield className="text-green-500" />,
-          message: (name) => (
+          message: (details) => (
             <>
-              <span className="font-bold text-green-400">{name}</span> was
-              attacked, but saved!
+              The Wolf attacked <span className="font-bold text-red-400">{details.victim}</span>,
+              but the <span className="font-bold text-green-400">Doctor</span> saved them!
             </>
           ),
-          description: "The doctor's intervention was successful.",
+          description: "A miraculous intervention!",
         },
         quiet: {
           icon: <FaMoon className="text-blue-300" />,
           message: () => "The night was eerily quiet.",
-          description: "No one was attacked.",
+          description: "No one was attacked. The village is safe... for now.",
         },
       },
     },
@@ -53,18 +53,28 @@ export default function StageResult ({ result, onClose, type }) {
       scenarios: {
         eliminated: {
           icon: <FaGavel className="text-amber-500" />,
-          message: (name) => (
+          message: (details) => (
             <>
-              <span className="font-bold text-amber-400">{name}</span> has been
-              voted out.
+              <span className="font-bold text-amber-400">{details.name}</span> has been
+              voted out with <span className="font-bold text-white">{details.count} votes</span>.
             </>
           ),
-          description: "The village has made its choice.",
+          description: "The village has spoken.",
+        },
+        tie: {
+          icon: <GiTiedScroll className="text-gray-400" />,
+          message: (details) => (
+            <>
+              Tie between <span className="font-bold text-amber-400">{details.tiedPlayers.join(" & ")}</span>
+              ({details.count} votes each).
+            </>
+          ),
+          description: "No consensus reached. No one dies today.",
         },
         noOneEliminated: {
           icon: <GiTiedScroll className="text-gray-400" />,
-          message: () => "The vote was tied.",
-          description: "No one was eliminated today.",
+          message: () => "No votes cast.",
+          description: "The village was indecisive.",
         },
       },
     },
@@ -73,7 +83,7 @@ export default function StageResult ({ result, onClose, type }) {
   const currentContent = content[type];
   const scenarioKey = Object.keys(result)[0];
   const scenario = currentContent.scenarios[scenarioKey];
-  const playerName = result[scenarioKey];
+
 
   return (
     <motion.div
@@ -115,7 +125,7 @@ export default function StageResult ({ result, onClose, type }) {
             {scenario.icon}
           </motion.div>
           <p className="text-xl text-gray-300">
-            {scenario.message(playerName)}
+            {scenario.message(result[scenarioKey])}
           </p>
           <p className="text-sm text-gray-500">{scenario.description}</p>
         </div>

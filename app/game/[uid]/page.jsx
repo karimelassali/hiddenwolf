@@ -299,10 +299,9 @@ export default function Game({ params }) {
           await voting(bot, randomTarget);
           await messaging(bot, roomData.id, currentPlayers, randomTarget);
         } else if (roomData.stage === "night") {
-          // --- Timer Configuration (New Logic) ---
-          const NIGHT_DURATION = (roomData.round_duration || 20) * 1000; // Default 20s
-          const WOLF_DELAY = Math.max(0, NIGHT_DURATION - 3000); // 3 seconds before end
-          const OTHER_BOT_DELAY = Math.floor(Math.random() * (NIGHT_DURATION / 2)) + 1000;
+          // --- Timer: Doctor/Seer act early, Wolf acts after them ---
+          const OTHER_BOT_DELAY = Math.floor(Math.random() * 3000) + 2000; // 2-5s
+          const WOLF_DELAY = 7000; // 7s — gives doctor time to save first
 
           const timeSinceAssignment = Date.now() - rolesAssignedTime.current;
           const SAFETY_BUFFER = 15000;
@@ -321,32 +320,12 @@ export default function Game({ params }) {
               .select('*')
               .eq('room_id', roomData.id);
 
+            if (!updatedPlayers) return;
+
             const currentAlivePlayers = updatedPlayers.filter((p) => p.is_alive);
             let currentTargets = currentAlivePlayers.filter(
               (p) => p.id !== bot.id
             );
-
-            // --- DEBUG: Log all potential targets and their humanity ---
-            console.log("🐺 Wolf calculating targets:", currentTargets.map(p => ({
-              id: p.id,
-              player_id: p.player_id,
-              name: p.name,
-              is_human: p.is_human,
-              user_id_match: p.player_id === user?.id
-            })));
-
-            // --- IMMUNITY: Wolves ignore humans on First Night ---
-            // Priority: User requested to bring back bot actions on first round.
-            if (false && bot.role === "wolf") {
-              const nonHumanTargets = currentTargets.filter(p => !p.is_human && p.player_id !== user?.id);
-
-              if (nonHumanTargets.length > 0) {
-                console.log(`🛡️ First Night Immunity: Wolf ${bot.name} ignoring humans. New targets:`, nonHumanTargets.map(t => t.name));
-                currentTargets = nonHumanTargets;
-              } else {
-                console.warn(`⚠️ First Night Immunity: No non-human targets left. Immunity bypassed.`);
-              }
-            }
 
             if (currentTargets.length === 0) return;
 
@@ -354,14 +333,11 @@ export default function Game({ params }) {
               currentTargets[Math.floor(Math.random() * currentTargets.length)];
 
             if (bot.role === "wolf") {
-              // --- Wolf Logic: Check if doctor saved anyone ---
-              const anyoneSaved = updatedPlayers.some(p => p.is_saved);
-              if (!anyoneSaved) {
-                console.log(`🐺 Wolf attacking ${finalTarget.name} (No saves detected)`);
-                await kill(bot, finalTarget, roomData.id);
-              } else {
-                console.log(`🐺 Wolf Holds Back: Someone was saved by the Doctor.`);
-              }
+              // Wolf ALWAYS attacks. If doctor saved the target, the kill() 
+              // function still fires but the night->day transition will detect 
+              // is_saved and report "saved" instead of "killed".
+              console.log(`🐺 Wolf attacking ${finalTarget.name}`);
+              await kill(bot, finalTarget, roomData.id);
             }
             else if (bot.role === "seer") await seePlayer(bot, finalTarget);
             else if (bot.role === "doctor") await savePlayer(bot, finalTarget);
@@ -398,21 +374,59 @@ export default function Game({ params }) {
           const savedPlayer = currentPlayers.find((p) => p.is_saved);
 
           if (killedPlayer) {
-            setNightResult({ killed: killedPlayer.name });
+            setNightResult({ killed: { name: killedPlayer.name } });
           } else if (savedPlayer) {
-            setNightResult({ saved: savedPlayer.name });
+            // Need to find who the wolf targeted (victim) to show "Wolf attacked X, but Doctor saved X"
+            // Since we don't store "who wolf attacked" in a separate column if they were saved, 
+            // and the wolf attack technically "failed", we might infer it or just show the saved player's name.
+            // For now, we'll assume the saved player was the target.
+            setNightResult({ saved: { victim: savedPlayer.name, savior: "Doctor" } });
           } else {
             setNightResult({ quiet: true });
           }
         }
 
         if (prevStageRef.current === "day" && roomData.stage === "night") {
-          const votedOutPlayer = playersAtStageStart.current.find(
-            (p) => p.is_alive && !currentPlayers.find((p2) => p2.id === p.id)?.is_alive
-          );
+          // --- NEW LOGIC: Calculate votes client-side to ensure immediate feedback ---
+          const votes = {};
+          currentPlayers.forEach(p => {
+            if (p.voted_to) {
+              votes[p.voted_to] = (votes[p.voted_to] || 0) + 1;
+            }
+          });
 
-          if (votedOutPlayer) {
-            setDayResult({ eliminated: votedOutPlayer.name });
+          // Find max votes
+          let maxVotes = 0;
+          let candidateId = null;
+          let isTie = false;
+          let tiedPlayersIds = [];
+
+          for (const [pid, count] of Object.entries(votes)) {
+            if (count > maxVotes) {
+              maxVotes = count;
+              candidateId = pid;
+              isTie = false;
+              tiedPlayersIds = [pid];
+            } else if (count === maxVotes) {
+              isTie = true;
+              tiedPlayersIds.push(pid);
+            }
+          }
+
+          if (maxVotes > 0) {
+            if (isTie) {
+              const tiedNames = tiedPlayersIds.map(id => currentPlayers.find(p => p.id === parseInt(id))?.name).filter(Boolean);
+              setDayResult({ tie: { tiedPlayers: tiedNames, count: maxVotes } });
+            } else {
+              const eliminated = currentPlayers.find(p => p.id === parseInt(candidateId));
+              if (eliminated) {
+                setDayResult({ eliminated: { name: eliminated.name, count: maxVotes } });
+
+                if (user?.id === roomData.host_id) {
+                  supabase.from("players").update({ is_alive: false, dying_method: "vote" }).eq("id", eliminated.id).then();
+                }
+              }
+            }
           } else {
             setDayResult({ noOneEliminated: true });
           }
@@ -424,7 +438,10 @@ export default function Game({ params }) {
               if (roomData.stage === "night") {
                 await supabase
                   .from("rooms")
-                  .update({ round: roomData.round + 1 })
+                  .update({
+                    round: roomData.round + 1,
+                    wolf_killed: false
+                  })
                   .eq("id", roomData.id);
               }
 
@@ -438,7 +455,16 @@ export default function Game({ params }) {
               });
 
               await Promise.all(playerUpdatePromises);
-              runBotsActions(currentPlayers);
+
+              // update local players to reflect the DB change so bots know they can act
+              const nextTurnPlayers = currentPlayers.map(p => ({
+                ...p,
+                is_action_done: false,
+                is_saved: roomData.stage === "night" ? false : p.is_saved,
+                voted_to: roomData.stage === "night" ? null : p.voted_to
+              }));
+
+              runBotsActions(nextTurnPlayers);
             } catch (error) {
               console.error("Handle new turn error:", error);
             }
@@ -485,6 +511,22 @@ export default function Game({ params }) {
     }
 
     const isGameActive = roomData.stage === "day" || roomData.stage === "night";
+
+    // --- AUTO-END DAY PHASE ---
+    if (roomData.stage === "day" && user?.id === roomData.host_id) {
+      const alivePlayers = players.filter(p => p.is_alive);
+      const allVoted = alivePlayers.every(p => p.is_action_done || p.voted_to);
+
+      if (allVoted && alivePlayers.length > 0) {
+        // Everyone has voted. End the day immediately.
+        console.log("⚡ All players have voted. Auto-ending Day phase.");
+        supabase
+          .from("rooms")
+          .update({ stage: "night" }) // Switch to night triggers the vote calculation in the backend triggers ideally
+          .eq("id", roomData.id)
+          .then();
+      }
+    }
     const rolesAreSet = players.every((p) => p.role !== null);
 
     if (isGameActive && rolesAreSet && roomData.round > 0) {

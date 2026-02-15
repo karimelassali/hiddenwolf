@@ -76,14 +76,15 @@ export async function messaging(bot, roomId, allPlayers, targetOfVote) {
         return wolfMessages[Math.floor(Math.random() * wolfMessages.length)];
 
       case "seer":
+      case "seer":
         // The seer gives a cryptic hint based on their last vision from the 'last_seen_role' column.
         if (bot.last_seen_role === "wolf") {
-          return "My vision last night was dark... there is evil among us.";
+          return `I have seen the shadows... ${targetOfVote.name} is a WOLF! Trust me!`;
         } else if (bot.last_seen_role) {
           // Could be 'villager' or 'doctor'
-          return "I saw an ally last night. We must stay strong and united.";
+          return `I gazed into the soul of a player last night... they are innocent. We must look elsewhere.`;
         } else {
-          return "The spirits are cloudy today. I must be careful.";
+          return "The spirits are cloudy today. I haven't found the evil yet.";
         }
 
       case "doctor":
