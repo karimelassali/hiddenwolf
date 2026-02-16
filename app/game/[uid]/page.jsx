@@ -34,7 +34,7 @@ import {
   messaging,
 } from "@/utils/botsActions";
 import { trackUserConnectivity } from "@/utils/trackUserconnectivity";
-import { HowlSound } from "@/utils/sounds";
+import { HowlSound, HeavyPainSound } from "@/utils/sounds";
 
 // --- Import UI Components ---
 import GameNavbar from "@/components/blocks/game-navbar";
@@ -66,6 +66,10 @@ const StageResult = dynamic(() => import("@/components/ui/stageResult"), {
   ssr: false,
 });
 
+const CheatMenu = dynamic(() => import("@/components/CheatMenu"), {
+  ssr: false,
+});
+
 const RoleAssignmentView = dynamic(() => import("@/components/RoleAssignmentView"), {
   ssr: false,
 });
@@ -84,6 +88,7 @@ export default function Game({ params }) {
   const [nightResult, setNightResult] = useState(null);
   const [dayResult, setDayResult] = useState(null);
   const [gameStartCountdown, setGameStartCountdown] = useState(0);
+  const [showDeathEffect, setShowDeathEffect] = useState(false);
 
   const hasShownRoleModal = useRef(false);
   const prevStageRef = useRef();
@@ -256,6 +261,24 @@ export default function Game({ params }) {
     }
   }, [user, players]);
 
+  // --- Instant Death Detection (via real-time subscription) ---
+  const wasAliveRef = useRef(true);
+  useEffect(() => {
+    if (!currentPlayer) return;
+
+    const wasAlive = wasAliveRef.current;
+    const isNowDead = currentPlayer.is_alive === false;
+
+    if (wasAlive && isNowDead && roomData?.stage === "night") {
+      // Player just died during the night — show effect immediately
+      setShowDeathEffect(true);
+      HeavyPainSound();
+      setTimeout(() => setShowDeathEffect(false), 5000);
+    }
+
+    wasAliveRef.current = currentPlayer.is_alive;
+  }, [currentPlayer?.is_alive, roomData?.stage]);
+
   useEffect(() => {
     if (roomData?.id && user?.id) {
       const interval = trackUserConnectivity(
@@ -371,6 +394,9 @@ export default function Game({ params }) {
           const killedPlayer = playersAtStageStart.current.find(
             (p) => p.is_alive && !currentPlayers.find((p2) => p2.id === p.id)?.is_alive
           );
+
+          console.log("☠️ Death Check:", { killedPlayer, prevStage: prevStageRef.current, currentStage: roomData.stage });
+
           const savedPlayer = currentPlayers.find((p) => p.is_saved);
 
           if (killedPlayer) {
@@ -446,10 +472,9 @@ export default function Game({ params }) {
               }
 
               const playerUpdatePromises = currentPlayers.map((p) => {
-                const updateData = { is_action_done: false };
+                const updateData = { is_action_done: false, voted_to: null };
                 if (roomData.stage === "night") {
                   updateData.is_saved = false;
-                  updateData.voted_to = null;
                 }
                 return supabase.from("players").update(updateData).eq("id", p.id);
               });
@@ -460,8 +485,8 @@ export default function Game({ params }) {
               const nextTurnPlayers = currentPlayers.map(p => ({
                 ...p,
                 is_action_done: false,
+                voted_to: null,
                 is_saved: roomData.stage === "night" ? false : p.is_saved,
-                voted_to: roomData.stage === "night" ? null : p.voted_to
               }));
 
               runBotsActions(nextTurnPlayers);
@@ -482,20 +507,9 @@ export default function Game({ params }) {
     processStageChange();
   }, [roomData?.stage, roomData?.id, roomData?.host_id, user?.id, roomData?.round]);
 
-  // --- Game Start Countdown Logic ---
   useEffect(() => {
-    // Trigger countdown when roles are first assigned (round 1, night stage)
-    if (roomData?.roles_assigned && roomData?.round === 1 && roomData?.stage === "night" && !hasShownRoleModal.current) {
-      setGameStartCountdown(5);
-    }
-  }, [roomData?.roles_assigned, roomData?.round, roomData?.stage]);
-
-  useEffect(() => {
-    if (gameStartCountdown > 0) {
-      const timer = setTimeout(() => setGameStartCountdown(prev => prev - 1), 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [gameStartCountdown]);
+    // Game start countdown logic removed to fix stuck screen issue
+  }, []);
 
   // --- Main Game Logic (Winner Check & Role Modal) ---
   useEffect(() => {
@@ -515,14 +529,15 @@ export default function Game({ params }) {
     // --- AUTO-END DAY PHASE ---
     if (roomData.stage === "day" && user?.id === roomData.host_id) {
       const alivePlayers = players.filter(p => p.is_alive);
-      const allVoted = alivePlayers.every(p => p.is_action_done || p.voted_to);
+      // Only check if everyone has actually voted (voted_to is set)
+      const allVoted = alivePlayers.every(p => p.voted_to);
 
       if (allVoted && alivePlayers.length > 0) {
         // Everyone has voted. End the day immediately.
         console.log("⚡ All players have voted. Auto-ending Day phase.");
         supabase
           .from("rooms")
-          .update({ stage: "night" }) // Switch to night triggers the vote calculation in the backend triggers ideally
+          .update({ stage: "night" })
           .eq("id", roomData.id)
           .then();
       }
@@ -588,8 +603,17 @@ export default function Game({ params }) {
         last_seen_role: null,
       }));
 
-      // Optimistic update for players
-      setPlayers(prev => prev.map((player, i) => ({ ...player, role: shuffled[i] })));
+      // Optimistic update for players — must include ALL reset fields, not just role
+      setPlayers(prev => prev.map((player, i) => ({
+        ...player,
+        role: shuffled[i],
+        is_alive: true,
+        is_action_done: false,
+        is_saved: false,
+        dying_method: null,
+        voted_to: null,
+        last_seen_role: null,
+      })));
 
       // --- Track assignment time for bot safety ---
       rolesAssignedTime.current = Date.now();
@@ -604,8 +628,13 @@ export default function Game({ params }) {
         return;
       }
 
+      // Add a small delay to ensure DB propagation and bot subscription catch-up
+      await new Promise(r => setTimeout(r, 500));
+
       // Optimistic update for room data - force UI transition immediately
       setRoomData((prev) => ({ ...prev, roles_assigned: true, stage: "night", round: 1 }));
+      setShowDeathEffect(false); // Reset death effect on new game
+      wasAliveRef.current = true; // Reset alive tracking for new game
 
       await supabase
         .from("rooms")
@@ -674,33 +703,7 @@ export default function Game({ params }) {
           />
         )}
 
-        {/* Game Start Countdown Overlay */}
-        {gameStartCountdown > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-auto"
-          >
-            <div className="absolute inset-0 bg-transparent z-[90]" /> {/* Block clicks */}
-            <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              key={gameStartCountdown}
-              className="flex flex-col items-center justify-center z-[91] relative gap-6"
-            >
-              <TurnTimer duration={5} onComplete={() => { }} stage="night" />
-              <div className="text-center">
-                <h2 className="text-4xl md:text-6xl font-serif font-black text-amber-500 mb-2 tracking-widest uppercase drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]">
-                  Prepare
-                </h2>
-                <p className="text-slate-400 font-serif italic text-lg animate-pulse">
-                  The Night Descends...
-                </p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+
 
         {dayResult && (
           <StageResult
@@ -709,6 +712,47 @@ export default function Game({ params }) {
             type="day"
           />
         )}
+
+        {/* Death Effect Overlay */}
+        <AnimatePresence>
+          {showDeathEffect && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center"
+            >
+              {/* Blood Vignette */}
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(180,0,0,0.6)_80%,rgba(100,0,0,0.9)_100%)] mix-blend-multiply" />
+
+              {/* Red Flash */}
+              <motion.div
+                initial={{ opacity: 0.8 }}
+                animate={{ opacity: 0 }}
+                transition={{ duration: 1 }}
+                className="absolute inset-0 bg-red-600 mix-blend-overlay"
+              />
+
+              {/* Text */}
+              <motion.div
+                initial={{ scale: 2, opacity: 0, y: 50 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ type: "spring", bounce: 0.5 }}
+                className="relative z-10 flex flex-col items-center"
+              >
+                <GiDeathSkull className="text-9xl text-red-600 drop-shadow-[0_0_30px_rgba(255,0,0,0.8)] mb-4" />
+                <h1 className="text-8xl font-black text-red-600 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(0,0,0,1)]"
+                  style={{ fontFamily: 'serif' }}>
+                  KILLED
+                </h1>
+                <p className="text-2xl text-red-200 mt-2 font-serif italic opacity-80">
+                  The Wolf has claimed your soul
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </AnimatePresence>
 
       {/* Navbar */}
@@ -813,6 +857,7 @@ export default function Game({ params }) {
           players={players}
           mobileView={mobileView}
           setMobileView={setMobileView}
+          isRoleModalOpen={isRoleModalOpen}
         />
       </div>
 
@@ -825,6 +870,16 @@ export default function Game({ params }) {
           currentPlayerRole={currentPlayer?.role}
         />
       )}
+
+      {/* Dev Cheat Menu */}
+      <CheatMenu
+        roomData={roomData}
+        players={players}
+        currentPlayer={currentPlayer}
+        setShowDeathEffect={setShowDeathEffect}
+        setIsRoleModalOpen={setIsRoleModalOpen}
+        setWinner={setWinner}
+      />
     </div>
   );
 }

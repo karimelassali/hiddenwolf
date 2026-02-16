@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { Modal } from "@/components/modal";
-import { HowlSound } from "@/utils/sounds";
+import { HowlSound, ReaperKillSound } from "@/utils/sounds";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Skull,
@@ -81,6 +81,9 @@ export default function PlayerActions({
 
     if (error) {
       console.log(error);
+    } else {
+      // Play the reaper kill sound on successful elimination
+      ReaperKillSound();
     }
     wolfKilledError && console.log(wolfKilledError);
     console.log("wolf killed updated");
@@ -131,6 +134,8 @@ export default function PlayerActions({
     setModalOpen(true);
     setOpen(false);
     setIsLoading(false);
+    // Return a flag so handlePlayerAction knows NOT to close modal for seer
+    return "seer_vision";
   };
 
   //Apply that the player has done his action in is_action_done
@@ -214,13 +219,14 @@ export default function PlayerActions({
 
   const handlePlayerAction = async (player, action) => {
     setSelectedPlayer(player);
+    let result;
 
     switch (action) {
       case "kill":
         await killPlayer(player);
         break;
       case "see":
-        await seePlayer(player);
+        result = await seePlayer(player);
         break;
       case "save":
         await savePlayer(player);
@@ -228,6 +234,13 @@ export default function PlayerActions({
       case "vote":
         await voting(player);
         break;
+    }
+
+    // For seer in embedded mode, delay applyActionDone until vision modal is closed
+    if (result === "seer_vision" && embedded) {
+      // applyActionDone will be called when the seer closes the vision modal
+      setSelectedPlayer(null);
+      return;
     }
 
     await applyActionDone();
@@ -314,7 +327,7 @@ export default function PlayerActions({
                     <motion.button
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => { handlePlayerAction(player, "see"); }}
+                      onClick={() => handlePlayerAction(player, "see")}
                       disabled={isLoading && selectedPlayer?.id === player.id}
                       className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-500 hover:to-purple-600 text-white py-3 rounded-xl font-semibold shadow-lg hover:shadow-purple-500/25 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -448,7 +461,14 @@ export default function PlayerActions({
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => { setModalOpen(false); onActionComplete?.(); }}
+                    onClick={async () => {
+                      setModalOpen(false);
+                      // For seer vision in embedded mode, mark action done now
+                      if (playerToSeeRole && embedded) {
+                        await applyActionDone();
+                      }
+                      onActionComplete?.();
+                    }}
                     className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-300"
                   >
                     Continue Game

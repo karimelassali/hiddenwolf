@@ -3,11 +3,13 @@ import PlayerActions from "@/components/blocks/player-actions";
 import { FaUsers, FaGamepad, FaComments, FaSkull, FaVoteYea, FaHeart, FaEye, FaVolumeUp } from 'react-icons/fa';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function GameActionsBar({ roomInfo, playerInfo, players, mobileView, setMobileView }) {
+export default function GameActionsBar({ roomInfo, playerInfo, players, mobileView, setMobileView, isRoleModalOpen }) {
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
 
     // Determine the primary action for the current player/phase
     const getPrimaryAction = () => {
+        // Don't show action button while role modal is still open
+        if (isRoleModalOpen) return null;
         if (!playerInfo?.is_alive || playerInfo?.is_action_done) return null;
 
         const { role } = playerInfo;

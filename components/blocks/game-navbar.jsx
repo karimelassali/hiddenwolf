@@ -20,45 +20,76 @@ export default function GameNavbar({
   const isNight = roomData.stage === "night";
   const aliveCount = players?.filter((p) => p.is_alive).length || 0;
 
-  // Reset timer on stage/round change
+  // --- Refs to hold latest values (avoids stale closures in setInterval) ---
+  const roomDataRef = useRef(roomData);
+  const currentPlayerIdRef = useRef(currentPlayerId);
+  const uidRef = useRef(uid);
   useEffect(() => {
-    setTimeLeft(timerDuration);
-  }, [roomData.stage, roomData.round, timerDuration]);
+    roomDataRef.current = roomData;
+    currentPlayerIdRef.current = currentPlayerId;
+    uidRef.current = uid;
+  });
 
-  // Countdown logic
+  const hasTriggeredRef = useRef(false);
+
+  const onTimerEnd = async () => {
+    const rd = roomDataRef.current;
+    const cpId = currentPlayerIdRef.current;
+    const code = uidRef.current;
+
+    console.log("⏱️ onTimerEnd fired", { stage: rd.stage, host: rd.host_id, me: cpId });
+
+    if (rd.host_id !== cpId) {
+      console.log("⏱️ Not host, skipping transition");
+      return;
+    }
+
+    try {
+      // Reset player action flags
+      await supabase
+        .from("players")
+        .update({ is_action_done: false, is_saved: false })
+        .eq("room_id", rd.id);
+
+      // Transition phase
+      const nextStage = rd.stage === "night" ? "day" : "night";
+      const updatePayload = { stage: nextStage };
+      if (rd.stage === "day") {
+        updatePayload.wolf_killed = false;
+      }
+
+      console.log(`⏱️ Transitioning: ${rd.stage} → ${nextStage}`);
+      await supabase.from("rooms").update(updatePayload).eq("code", code);
+    } catch (e) {
+      console.error("Timer end error:", e);
+      toast.error("Failed to change phase.");
+    }
+  };
+
+  // Combined timer: reset + countdown, keyed ONLY on stage/round
   useEffect(() => {
     if (roomData.stage === "ended") return;
+
+    // Reset for this new phase
+    hasTriggeredRef.current = false;
+    setTimeLeft(timerDuration);
+
     timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
-          onTimerEnd();
+          if (!hasTriggeredRef.current) {
+            hasTriggeredRef.current = true;
+            setTimeout(() => onTimerEnd(), 0);
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+
     return () => clearInterval(timerRef.current);
   }, [roomData.stage, roomData.round]);
-
-  const onTimerEnd = async () => {
-    if (roomData.host_id !== currentPlayerId) return;
-    try {
-      await supabase
-        .from("players")
-        .update({ is_action_done: false, is_saved: false })
-        .eq("room_id", roomData.id);
-
-      if (roomData.stage === "night") {
-        await supabase.from("rooms").update({ stage: "day" }).eq("code", uid);
-      } else if (roomData.stage === "day") {
-        await supabase.from("rooms").update({ stage: "night" }).eq("code", uid);
-        await supabase.from("rooms").update({ wolf_killed: false }).eq("code", uid);
-      }
-    } catch (e) {
-      console.error("Timer end error:", e);
-    }
-  };
 
   // Timer bar progress (0 to 1)
   const progress = Math.max(0, timeLeft / timerDuration);
@@ -80,8 +111,8 @@ export default function GameNavbar({
       <Toaster />
       <nav
         className={`relative w-full px-3 sm:px-5 py-2.5 sm:py-3 transition-all duration-700 z-40 border-b ${isNight
-            ? "bg-gray-950/90 backdrop-blur-xl border-purple-900/30"
-            : "bg-indigo-950/90 backdrop-blur-xl border-indigo-700/30"
+          ? "bg-gray-950/90 backdrop-blur-xl border-purple-900/30"
+          : "bg-indigo-950/90 backdrop-blur-xl border-indigo-700/30"
           }`}
       >
         {/* Main row */}
@@ -89,8 +120,8 @@ export default function GameNavbar({
           {/* Left: Stage + Round */}
           <div className="flex items-center gap-2">
             <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all ${isNight
-                ? "bg-purple-950/60 border-purple-800/40"
-                : "bg-amber-950/40 border-amber-700/30"
+              ? "bg-purple-950/60 border-purple-800/40"
+              : "bg-amber-950/40 border-amber-700/30"
               }`}>
               {isNight ? (
                 <IoMoon className="w-4 h-4 text-purple-400" />
@@ -135,9 +166,13 @@ export default function GameNavbar({
             </div>
 
             {isHost && (
-              <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-yellow-600/20 border border-yellow-600/30">
-                <FaCrown className="w-3 h-3 text-yellow-500" />
-                <span className="text-yellow-400 text-xs font-bold hidden sm:inline">HOST</span>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-yellow-600/20 border border-yellow-600/30">
+                  <FaCrown className="w-3 h-3 text-yellow-500" />
+                  <span className="text-yellow-400 text-xs font-bold hidden sm:inline">HOST</span>
+                </div>
+
+
               </div>
             )}
           </div>

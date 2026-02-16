@@ -1,5 +1,5 @@
 import { Howl } from "howler";
-export function Killed(){
+export function Killed() {
     console.log('killed');
     const sound = new Howl({
         src: ['assets/sounds/killed.mp3']
@@ -7,7 +7,7 @@ export function Killed(){
     sound.play();
 }
 
-export function Notification(){
+export function Notification() {
     const sound = new Howl({
         src: ['/assets/sounds/noti.mp3']
     });
@@ -17,14 +17,14 @@ export function Notification(){
 
 
 
-export function HowlSound(){
+export function HowlSound() {
     const sound = new Howl({
         src: ['/assets/sounds/howl.mp3']
     });
     sound.play();
 }
 
-export function JoinSound(){
+export function JoinSound() {
     const sound = new Howl({
         src: ['/assets/sounds/join.mp3']
     });
@@ -33,8 +33,8 @@ export function JoinSound(){
 
 
 export let backgroundSound;
-export function BackgroundSound(){
-    if(backgroundSound === undefined){
+export function BackgroundSound() {
+    if (backgroundSound === undefined) {
         backgroundSound = new Howl({
             src: ['/assets/sounds/background.mp3'],
             loop: true,
@@ -44,14 +44,14 @@ export function BackgroundSound(){
     }
 }
 
-export function WinSound(){
+export function WinSound() {
     const sound = new Howl({
         src: ['/assets/sounds/win.mp3']
     });
     sound.play();
 }
 
-export function LoseSound(){
+export function LoseSound() {
     const sound = new Howl({
         src: ['/assets/sounds/lose.mp3']
     });
@@ -59,7 +59,7 @@ export function LoseSound(){
 }
 
 
-export function CashSound(){
+export function CashSound() {
     const sound = new Howl({
         src: ['/assets/sounds/cash.mp3']
     });
@@ -67,9 +67,24 @@ export function CashSound(){
 }
 
 
-export function ClickSound(){
+export function ClickSound() {
     const sound = new Howl({
-        src:['/assets/sounds/click.mp3']
+        src: ['/assets/sounds/click.mp3']
+    });
+    sound.play();
+}
+
+export function HeavyPainSound() {
+    const sound = new Howl({
+        src: ['/assets/sounds/heavy-pain.mp3']
+    });
+    sound.play();
+}
+
+export function ReaperKillSound() {
+    const sound = new Howl({
+        src: ['/assets/sounds/reaverkill1.mp3'],
+        volume: 0.8,
     });
     sound.play();
 }
