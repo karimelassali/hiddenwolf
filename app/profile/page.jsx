@@ -32,6 +32,7 @@ import { useRouter } from "next/navigation";
 import { CustomAudioPlayer } from "@/components/audioPlayer";
 import { NumberCounting } from "@/components/magicui/number-ticker";
 import { ClickSound } from "@/utils/sounds";
+import { getLevelProgress, getLevelTitle, getLevelColor, getLevelBgColor } from "@/utils/levelSystem";
 
 export default function Page() {
   const [playerState, setPlayerState] = useState([]);
@@ -147,6 +148,8 @@ export default function Page() {
       ? ((playerState.wins / playerState.total_games) * 100).toFixed(1)
       : 0
     : 0;
+
+  const levelInfo = playerState ? getLevelProgress(playerState.xp || 0) : null;
 
   if (!isLoaded || !user || !playerState) {
     return (
@@ -270,6 +273,11 @@ export default function Page() {
                   <span className="text-white">
                     {playerState.username || "Anonymous"}
                   </span>
+                  {levelInfo && (
+                    <span className={`px-3 py-1 rounded-lg border text-sm font-black ${getLevelBgColor(levelInfo.level)} ${getLevelColor(levelInfo.level)}`}>
+                      Lv.{levelInfo.level}
+                    </span>
+                  )}
 
                   <motion.button
                     whileTap={{ scale: 0.9 }}
@@ -404,7 +412,7 @@ export default function Page() {
             <div className="flex flex-col items-center lg:items-end gap-1">
               <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xl shadow-[0_0_20px_rgba(245,158,11,0.1)]">
                 <PiCoins size={24} />
-                <NumberCounting value={playerState?.coins || 0} />
+                <NumberCounting className="text-amber-400" value={playerState?.coins || 0} />
               </div>
               <span className="text-xs text-amber-500/40 uppercase tracking-widest font-semibold">Balance</span>
             </div>
@@ -476,6 +484,43 @@ export default function Page() {
             </div>
           </div>
         </motion.div>
+
+        {/* Level & XP Progress */}
+        {
+          levelInfo && (
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.35, duration: 0.6 }}
+              className="bg-neutral-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <div className={`px-4 py-2 rounded-xl border font-black text-2xl ${getLevelBgColor(levelInfo.level)} ${getLevelColor(levelInfo.level)}`}>
+                    Lv.{levelInfo.level}
+                  </div>
+                  <div>
+                    <p className={`font-bold text-lg ${getLevelColor(levelInfo.level)}`}>{levelInfo.title}</p>
+                    <p className="text-neutral-500 text-sm">{levelInfo.xpIntoLevel} / {levelInfo.xpNeeded} XP to next level</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-neutral-300 font-bold text-lg">{levelInfo.totalXp}</p>
+                  <p className="text-neutral-500 text-xs uppercase tracking-wider">Total XP</p>
+                </div>
+              </div>
+              <div className="w-full bg-neutral-800 rounded-full h-3 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${levelInfo.progress}%` }}
+                  transition={{ delay: 0.5, duration: 1.5, ease: "easeOut" }}
+                  className="h-full rounded-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-500 shadow-[0_0_10px_rgba(147,51,234,0.5)]"
+                />
+              </div>
+              <p className="text-right text-neutral-600 text-xs mt-1">{levelInfo.progress}%</p>
+            </motion.div>
+          )
+        }
 
         {/* Inventory Section */}
         <motion.div

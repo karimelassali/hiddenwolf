@@ -11,6 +11,7 @@ import { Loader } from "@/components/ui/loader";
 import { Modal } from "@/components/modal";
 import { NumberCounting } from "@/components/magicui/number-ticker";
 import { motion, AnimatePresence } from "framer-motion";
+import { getLevelTitle, getLevelColor } from "@/utils/levelSystem";
 import {
   Skull,
   Scroll,
@@ -39,6 +40,7 @@ export default function Home() {
   const [currentBgIndex, setCurrentBgIndex] = useState(0);
   const [avatar, setAvatar] = useState(null);
   const [totalGames, setTotalGames] = useState(0);
+  const [level, setLevel] = useState(1);
   const [username, setUsername] = useState("");
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -92,16 +94,23 @@ export default function Home() {
   };
 
   const fetchPlayerDetails = async (currentUser) => {
-    supabase.from("players").delete().eq("player_id", currentUser.id).catch(console.error);
+    // Clean up any stale player rows (fire and forget)
+    await supabase.from("players").delete().eq("player_id", currentUser.id);
     const { data, error } = await supabase
       .from("player_stats")
-      .select("avatar,total_games,username")
+      .select("*")
       .eq("player_id", currentUser.id)
       .single();
+
+    if (error) {
+      console.error("[Lobby] Error fetching player_stats:", error);
+    }
+
     if (data) {
-      setAvatar(data.avatar);
-      setTotalGames(data.total_games);
-      setUsername(data.username);
+      setAvatar(data.avatar || null);
+      setTotalGames(data.total_games || 0);
+      setUsername(data.username || "");
+      setLevel(data.level || 1);
     }
   };
 
@@ -225,12 +234,12 @@ export default function Home() {
             backgroundSize: "cover",
             backgroundPosition: "center",
           }}
-          className="absolute inset-0 z-0 opacity-40 grayscale-[40%] contrast-125 saturate-50"
+          className="absolute inset-0 z-0 opacity-50 grayscale-[30%] contrast-110 saturate-75"
         />
       </AnimatePresence>
 
-      {/* Heavy Vignette & Texture Overlay for "Old Paper/Darkness" feel */}
-      <div className="absolute inset-0 bg-gradient-to-b from-stone-950/90 via-stone-900/60 to-stone-950/95 z-0" />
+      {/* Vignette & Texture Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-stone-950/80 via-stone-900/40 to-stone-950/85 z-0" />
       <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay z-0 pointer-events-none" />
 
       {/* Reveal Coins Modal */}
@@ -256,7 +265,7 @@ export default function Home() {
             <div className="relative">
               <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-stone-600 shadow-inner">
                 {avatar ? (
-                  <Image src={avatar} alt="Avatar" width={48} height={48} className="object-cover w-full h-full grayscale-[20%]" />
+                  <img src={avatar} alt="Avatar" className="object-cover w-full h-full" />
                 ) : (
                   <div className="w-full h-full bg-stone-800 flex items-center justify-center text-stone-400 font-bold font-serif">
                     {user?.firstName?.charAt(0) || "P"}
@@ -270,17 +279,19 @@ export default function Home() {
               <span className="text-base font-bold text-stone-200 leading-none mb-1 font-serif tracking-wide">
                 {username || user?.firstName || "Traveler"}
               </span>
-              <div className="flex items-center gap-3 text-xs text-stone-400 font-mono">
-                <span className="text-amber-700/80">LVL {Math.floor(totalGames / 10) + 1}</span>
-                <span className="w-px h-3 bg-stone-700/50" />
-                <span><NumberCounting value={totalGames} /> Hunts</span>
+              <div className="flex items-center gap-3 text-xs font-mono">
+                <span className={`font-bold ${getLevelColor(level)}`}>LVL {level}</span>
+                <span className="w-px h-3 bg-stone-600" />
+                <span className="text-stone-300">{getLevelTitle(level)}</span>
+                <span className="w-px h-3 bg-stone-600" />
+                <span className="text-stone-300"><NumberCounting value={totalGames} /> Hunts</span>
               </div>
             </div>
           </motion.div>
         </header>
 
         {/* Main Action Area - Tarot Cards Layout */}
-        <main className="flex-1 flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12 max-w-6xl mx-auto w-full pb-20">
+        <main className="flex-1 flex flex-col md:flex-row items-center justify-center gap-6 md:gap-10 max-w-4xl mx-auto w-full pb-24 px-4">
 
           {/* Card 1: Create Room (The Creator/Host) */}
           <motion.button
@@ -289,7 +300,7 @@ export default function Home() {
             transition={{ delay: 0.2, duration: 0.6 }}
             onClick={handleCreateRoom}
             disabled={roomIsCreating}
-            className="group relative w-full max-w-sm md:max-w-md aspect-[3/4.5] bg-stone-900 rounded-lg overflow-hidden border border-stone-800 shadow-[0_0_0_1px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(220,38,38,0.2)] transition-all duration-500"
+            className="group relative w-full max-w-[260px] md:max-w-[300px] aspect-[3/3.5] bg-stone-900 rounded-lg overflow-hidden border border-stone-700/60 shadow-[0_0_0_1px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(220,38,38,0.2)] transition-all duration-500"
           >
             {/* Card Frame/Border Graphic */}
             <div className="absolute inset-2 border border-stone-700/30 rounded flex flex-col items-center justify-between p-2 z-20 pointer-events-none group-hover:border-red-900/40 transition-colors duration-500">
@@ -306,22 +317,22 @@ export default function Home() {
             {/* Center Icon/Art */}
             <div className="relative z-10 flex flex-col items-center justify-center h-full gap-6 p-6 group-hover:-translate-y-2 transition-transform duration-500">
               <div className="p-5 rounded-full border border-stone-700/50 bg-stone-950 shadow-2xl group-hover:border-red-900/50 transition-colors duration-500">
-                {roomIsCreating ? <Loader className="text-stone-400" /> : <GiWolfHead className="w-16 h-16 text-stone-300 group-hover:text-red-700 transition-colors duration-500" />}
+                {roomIsCreating ? <Loader className="text-stone-400" /> : <GiWolfHead className="w-12 h-12 text-stone-200 group-hover:text-red-600 transition-colors duration-500" />}
               </div>
 
               <div className="text-center space-y-2">
                 <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-200 tracking-widest uppercase group-hover:text-red-100 transition-colors">
                   New Hunt
                 </h2>
-                <p className="text-stone-500 text-sm md:text-base font-serif italic max-w-[200px] mx-auto leading-relaxed group-hover:text-stone-400 transition-colors">
+                <p className="text-stone-500 text-xs md:text-sm font-serif italic max-w-[180px] mx-auto leading-relaxed group-hover:text-stone-400 transition-colors">
                   "Gather the pack. The moon is high."
                 </p>
               </div>
             </div>
 
             {/* Bottom Label (Tarot Style) */}
-            <div className="absolute bottom-6 left-0 w-full text-center z-20">
-              <span className="text-xs font-mono text-stone-600 tracking-[0.3em] uppercase group-hover:text-stone-500 transition-colors">IV. The Host</span>
+            <div className="absolute bottom-4 left-0 w-full text-center z-20">
+              <span className="text-[10px] font-mono text-stone-600 tracking-[0.15em] uppercase group-hover:text-stone-500 transition-colors">IV. The Host</span>
             </div>
           </motion.button>
 
@@ -331,7 +342,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
             onClick={handleJoinRoom}
-            className="group relative w-full max-w-sm md:max-w-md aspect-[3/4.5] bg-stone-900 rounded-lg overflow-hidden border border-stone-800 shadow-[0_0_0_1px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(217,119,6,0.1)] transition-all duration-500"
+            className="group relative w-full max-w-[260px] md:max-w-[300px] aspect-[3/3.5] bg-stone-900 rounded-lg overflow-hidden border border-stone-700/60 shadow-[0_0_0_1px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(217,119,6,0.15)] transition-all duration-500"
           >
             {/* Card Frame */}
             <div className="absolute inset-2 border border-stone-700/30 rounded flex flex-col items-center justify-between p-2 z-20 pointer-events-none group-hover:border-amber-900/30 transition-colors duration-500">
@@ -347,22 +358,22 @@ export default function Home() {
             {/* Center Icon/Art */}
             <div className="relative z-10 flex flex-col items-center justify-center h-full gap-6 p-6 group-hover:-translate-y-2 transition-transform duration-500">
               <div className="p-5 rounded-full border border-stone-700/50 bg-stone-950 shadow-2xl group-hover:border-amber-900/40 transition-colors duration-500">
-                <GiCrossedSwords className="w-16 h-16 text-stone-300 group-hover:text-amber-700 transition-colors duration-500" />
+                <GiCrossedSwords className="w-12 h-12 text-stone-200 group-hover:text-amber-600 transition-colors duration-500" />
               </div>
 
               <div className="text-center space-y-2">
                 <h2 className="text-2xl md:text-3xl font-serif font-bold text-stone-200 tracking-widest uppercase group-hover:text-amber-100 transition-colors">
                   Join Pack
                 </h2>
-                <p className="text-stone-500 text-sm md:text-base font-serif italic max-w-[200px] mx-auto leading-relaxed group-hover:text-stone-400 transition-colors">
+                <p className="text-stone-500 text-xs md:text-sm font-serif italic max-w-[180px] mx-auto leading-relaxed group-hover:text-stone-400 transition-colors">
                   "Answer the call. Your fate awaits."
                 </p>
               </div>
             </div>
 
             {/* Bottom Label */}
-            <div className="absolute bottom-6 left-0 w-full text-center z-20">
-              <span className="text-xs font-mono text-stone-600 tracking-[0.3em] uppercase group-hover:text-stone-500 transition-colors">VII. The Pack</span>
+            <div className="absolute bottom-4 left-0 w-full text-center z-20">
+              <span className="text-[10px] font-mono text-stone-600 tracking-[0.15em] uppercase group-hover:text-stone-500 transition-colors">VII. The Pack</span>
             </div>
           </motion.button>
         </main>
@@ -374,21 +385,21 @@ export default function Home() {
           transition={{ duration: 0.8, delay: 0.4 }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-lg"
         >
-          <div className="flex items-center justify-center gap-6 md:gap-8 p-4 bg-stone-950/80 backdrop-blur-md border border-stone-800 rounded-full shadow-2xl shadow-black">
+          <div className="flex items-center justify-center gap-6 md:gap-8 p-4 bg-stone-900/90 backdrop-blur-md border border-stone-600/50 rounded-full shadow-2xl">
             {dockItems.map((item, index) => (
               <button
                 key={index}
                 onClick={() => router.push(item.route)}
                 className="group relative flex flex-col items-center justify-center gap-1 min-w-[3rem] transition-all duration-300 hover:-translate-y-1"
               >
-                <div className="text-stone-500 group-hover:text-stone-200 transition-colors duration-300">
-                  <item.icon size={22} className="opacity-70 group-hover:opacity-100" />
+                <div className="text-stone-300 group-hover:text-white transition-colors duration-300">
+                  <item.icon size={22} />
                 </div>
-                <span className="text-[10px] font-serif tracking-wider text-stone-600 group-hover:text-stone-400 uppercase transition-colors">
+                <span className="text-[10px] font-serif tracking-wider text-stone-400 group-hover:text-stone-200 uppercase transition-colors">
                   {item.label}
                 </span>
                 {/* Glow dot on hover */}
-                <div className="absolute -bottom-2 w-1 h-1 rounded-full bg-red-900/0 group-hover:bg-red-700/80 transition-all duration-300" />
+                <div className="absolute -bottom-2 w-1 h-1 rounded-full bg-red-900/0 group-hover:bg-red-500/80 transition-all duration-300" />
               </button>
             ))}
           </div>

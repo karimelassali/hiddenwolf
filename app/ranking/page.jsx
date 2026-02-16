@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { Trophy, Crown, Medal, Star, TrendingUp, Users, Target, Award } from 'lucide-react';
 import { FaArrowLeft } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
+import { getLevelColor, getLevelBgColor, getLevelTitle } from '@/utils/levelSystem';
 export default function Page() {
     const { user, isLoaded } = useUser();
     const [ranking, setRanking] = useState([]);
@@ -42,12 +43,16 @@ export default function Page() {
 
 
 
-    const getTier = (wins) => {
-        if (wins >= 100) return { name: "Legend", icon: Crown, color: "text-red-500" };
-        if (wins >= 50) return { name: "Grandmaster", icon: Star, color: "text-yellow-500" };
-        if (wins >= 20) return { name: "Master", icon: Target, color: "text-purple-500" };
-        if (wins >= 10) return { name: "Elite", icon: Trophy, color: "text-blue-500" };
-        return { name: "Rookie", icon: Users, color: "text-slate-500" };
+    const getTier = (level) => {
+        const lvl = level || 1;
+        if (lvl >= 50) return { name: "Mythic Wolf", icon: Crown, color: "text-red-500" };
+        if (lvl >= 40) return { name: "Alpha", icon: Crown, color: "text-yellow-500" };
+        if (lvl >= 30) return { name: "Hunter", icon: Star, color: "text-purple-500" };
+        if (lvl >= 20) return { name: "Guardian", icon: Target, color: "text-blue-500" };
+        if (lvl >= 15) return { name: "Tracker", icon: Trophy, color: "text-cyan-500" };
+        if (lvl >= 10) return { name: "Pathfinder", icon: Trophy, color: "text-emerald-500" };
+        if (lvl >= 5) return { name: "Villager", icon: Users, color: "text-green-500" };
+        return { name: "Pup", icon: Users, color: "text-slate-500" };
     };
 
     const getWinRate = (player) => {
@@ -198,6 +203,7 @@ export default function Page() {
                                 <tr className="border-b border-white/5 text-neutral-400 text-xs uppercase tracking-wider font-bold">
                                     <th className="p-6">Rank</th>
                                     <th className="p-6">Player</th>
+                                    <th className="p-6 text-center">Level</th>
                                     <th className="p-6 text-center">Tier</th>
                                     <th className="p-6 text-right">Win Rate</th>
                                     <th className="p-6 text-right">Wins</th>
@@ -205,7 +211,7 @@ export default function Page() {
                             </thead>
                             <tbody className="divide-y divide-white/5">
                                 {ranking.map((player, index) => {
-                                    const tier = getTier(player.wins);
+                                    const tier = getTier(player.level);
                                     const TierIcon = tier.icon;
 
                                     return (
@@ -241,6 +247,11 @@ export default function Page() {
                                                         </div>
                                                     </div>
                                                 </div>
+                                            </td>
+                                            <td className="p-6 text-center">
+                                                <span className={`px-2.5 py-1 rounded-lg border font-black text-sm ${getLevelBgColor(player.level || 1)} ${getLevelColor(player.level || 1)}`}>
+                                                    {player.level || 1}
+                                                </span>
                                             </td>
                                             <td className="p-6 text-center">
                                                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/5 bg-white/[0.02] ${tier.color} bg-opacity-10 shadow-sm`}>

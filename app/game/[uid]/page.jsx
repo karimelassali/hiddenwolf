@@ -164,7 +164,7 @@ export default function Game({ params }) {
           await upsertPlayer(room.id, user);
         }
 
-        const { data: initialPlayers, error: playersError } = await supabase
+        let { data: initialPlayers, error: playersError } = await supabase
           .from("players")
           .select("*")
           .eq("room_id", room.id)
@@ -174,6 +174,24 @@ export default function Game({ params }) {
           console.error("Error fetching players", playersError);
           toast.error("Failed to load players");
           return;
+        }
+
+        // Enrich players with level data from player_stats
+        const humanPlayerIds = initialPlayers.filter(p => p.is_human && p.player_id).map(p => p.player_id);
+        if (humanPlayerIds.length > 0) {
+          const { data: stats } = await supabase
+            .from("player_stats")
+            .select("player_id, level")
+            .in("player_id", humanPlayerIds);
+
+          if (stats) {
+            const levelMap = {};
+            stats.forEach(s => { levelMap[s.player_id] = s.level || 1; });
+            initialPlayers = initialPlayers.map(p => ({
+              ...p,
+              level: levelMap[p.player_id] || 1,
+            }));
+          }
         }
 
         setPlayers(initialPlayers);
@@ -592,16 +610,19 @@ export default function Game({ params }) {
         baseRoles.push("villager");
       }
       const shuffled = baseRoles.sort(() => Math.random() - 0.5);
-      const playerUpdates = players.map((player, i) => ({
-        ...player,
-        role: shuffled[i],
-        is_alive: true,
-        is_action_done: false,
-        is_saved: false,
-        dying_method: null,
-        voted_to: null,
-        last_seen_role: null,
-      }));
+      const playerUpdates = players.map((player, i) => {
+        const { level, ...dbPlayer } = player; // strip client-only fields not in players table
+        return {
+          ...dbPlayer,
+          role: shuffled[i],
+          is_alive: true,
+          is_action_done: false,
+          is_saved: false,
+          dying_method: null,
+          voted_to: null,
+          last_seen_role: null,
+        };
+      });
 
       // Optimistic update for players — must include ALL reset fields, not just role
       setPlayers(prev => prev.map((player, i) => ({
@@ -868,6 +889,7 @@ export default function Game({ params }) {
           playerID={currentPlayer?.id}
           clerkId={user?.id}
           currentPlayerRole={currentPlayer?.role}
+          currentPlayerAlive={currentPlayer?.is_alive}
         />
       )}
 
