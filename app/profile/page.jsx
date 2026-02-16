@@ -96,30 +96,22 @@ export default function Page() {
   const getRarityColor = (rarity) => {
     switch (rarity?.toLowerCase()) {
       case "common":
-        return "from-gray-600 to-gray-800";
+        return "from-stone-800 to-stone-900";
       case "rare":
-        return "from-slate-600 to-slate-800";
+        return "from-slate-800 to-slate-900";
       case "epic":
-        return "from-purple-800 to-purple-900";
+        return "from-neutral-800 to-neutral-900";
       case "legendary":
-        return "from-amber-700 to-orange-800";
+        return "from-zinc-800 to-zinc-900";
       default:
-        return "from-gray-600 to-gray-800";
+        return "from-stone-800 to-stone-900";
     }
   };
 
   const getRarityGlow = (rarity) => {
     switch (rarity?.toLowerCase()) {
       case "common":
-        return "shadow-gray-700/20";
-      case "rare":
-        return "shadow-slate-700/25";
-      case "epic":
-        return "shadow-purple-700/30";
-      case "legendary":
-        return "shadow-amber-600/35";
-      default:
-        return "shadow-gray-700/20";
+        return "shadow-none";
     }
   };
 
@@ -140,8 +132,8 @@ export default function Page() {
     selectedCategory === "All"
       ? playerInventory
       : playerInventory.filter(
-          (item) => item.store?.category === selectedCategory
-        );
+        (item) => item.store?.category === selectedCategory
+      );
 
   const categories = [
     "All",
@@ -158,11 +150,11 @@ export default function Page() {
 
   if (!isLoaded || !user || !playerState) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 via-slate-900 to-black">
+      <div className="w-full h-full flex items-center justify-center bg-gray-950">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="w-16 h-16 border-4 border-gray-600 border-t-transparent rounded-full"
+          className="w-16 h-16 border-4 border-white/20 border-t-white rounded-full"
         />
       </div>
     );
@@ -202,87 +194,61 @@ export default function Page() {
 
   return (
     <div
-      style={{
-        backgroundImage: "url('/assets/images/profile_bg.avif')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-      className="w-full relative h-full bg-gradient-to-br from-gray-900 via-slate-900 to-black overflow-auto"
+      className="w-full relative h-full bg-[#0a0a0a] overflow-auto font-sans text-neutral-200 selection:bg-white/10"
     >
+      {/* Background Image with Overlay */}
+      <div
+        className="fixed inset-0 z-0 opacity-20 pointer-events-none grayscale"
+        style={{
+          backgroundImage: "url('/assets/images/profile_bg.avif')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      <div className="fixed inset-0 z-0 bg-neutral-950/90 pointer-events-none" />
+
       <motion.div
         onClick={() => router.push("/")}
-        whileTap={{ scale: 0.9 }}
-        whileHover={{ scale: 1.1 }}
-        className="absolute z-40 bg-gradient-to-br from-gray-800 to-slate-900 rounded-full p-3 top-4 left-4 border border-gray-700"
+        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.05 }}
+        className="fixed z-50 top-6 left-6 p-3 rounded-full bg-neutral-900/50 hover:bg-neutral-800 border border-white/5 backdrop-blur-md transition-all duration-300 group cursor-pointer"
       >
-        <MoveLeft size={40} className="text-gray-300 cursor-pointer" />
+        <MoveLeft size={24} className="text-neutral-400 group-hover:text-white transition-colors" />
       </motion.div>
 
-      {/* Mysterious floating particles */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-gray-600/20 rounded-full"
-            initial={{
-              x:
-                Math.random() *
-                (typeof window !== "undefined" ? window.innerWidth : 1000),
-              y:
-                Math.random() *
-                (typeof window !== "undefined" ? window.innerHeight : 800),
-            }}
-            animate={{
-              y: [
-                null,
-                Math.random() *
-                  (typeof window !== "undefined" ? window.innerHeight : 800),
-              ],
-              x: [
-                null,
-                Math.random() *
-                  (typeof window !== "undefined" ? window.innerWidth : 1000),
-              ],
-              opacity: [0.2, 0.8, 0.2],
-            }}
-            transition={{
-              duration: Math.random() * 20 + 15,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          />
-        ))}
-      </div>
-
       <div className="max-w-7xl mx-auto p-6 space-y-8 relative z-10">
-        {/* Profile Header */}
         <motion.div
-          initial={{ y: -50, opacity: 0 }}
+          initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6 }}
-          className="bg-black/30 backdrop-blur-xl rounded-3xl border border-gray-700/30 p-8 shadow-2xl"
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="relative bg-neutral-900/40 backdrop-blur-md rounded-[2rem] border border-white/5 p-8 lg:p-10 shadow-2xl overflow-hidden"
         >
-          <div className="flex flex-col lg:flex-row items-center gap-6">
+
+          <div className="flex flex-col lg:flex-row items-center gap-8 relative z-10">
             {/* Avatar Section */}
             <div className="relative">
               <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="w-32 h-32 bg-gradient-to-r from-gray-700 to-slate-800 rounded-full p-1 shadow-2xl shadow-gray-800/50"
+                whileHover={{ scale: 1.02 }}
+                className="w-32 h-32 lg:w-40 lg:h-40 relative rounded-full p-1 bg-neutral-800 shadow-xl"
               >
-                <div className="w-full h-full bg-gray-900 rounded-full flex items-center justify-center text-4xl font-bold text-gray-300">
+                <div className="w-full h-full rounded-full overflow-hidden bg-[#151621] relative group">
                   {playerState?.avatar ? (
                     <Image
                       src={playerState?.avatar}
                       alt="Avatar"
-                      width={100}
-                      height={100}
-                      className="w-full h-full object-cover rounded-full"
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
                     />
-                  ) : (
-                    <div className="w-full h-full bg-gray-900 rounded-full flex items-center justify-center text-4xl font-bold text-gray-300">
-                      {user.firstName?.charAt(0) || "P"}
-                    </div>
-                  )}
+                  ) : null}
+
+                  {/* Fallback / Default Avatar */}
+                  <div className={`w-full h-full flex items-center justify-center bg-neutral-800 text-neutral-400 ${playerState?.avatar ? 'hidden' : 'flex'}`}>
+                    <span className="text-4xl font-bold">{user.firstName?.charAt(0) || "P"}</span>
+                  </div>
                 </div>
               </motion.div>
 
@@ -300,10 +266,24 @@ export default function Page() {
                 transition={{ delay: 0.2 }}
                 className="flex items-center gap-3 mb-3"
               >
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-300 via-slate-300 to-gray-400 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300 hover:from-gray-200 hover:via-slate-200 hover:to-gray-300">
-                  {user.username || `${user.firstName} ${user.lastName}`}-
-                  {playerState.username}
+                <h1 className="text-3xl lg:text-5xl font-bold text-white tracking-tight flex items-center gap-3">
+                  <span className="text-white">
+                    {playerState.username || "Anonymous"}
+                  </span>
+
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setEditingUsername(true)}
+                    className="p-2 rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                  >
+                    <Edit2 size={18} />
+                  </motion.button>
                 </h1>
+
+                <p className="text-slate-400 text-sm lg:text-base mt-1 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
+                  Online • {user.firstName} {user.lastName}
+                </p>
 
                 {user.username && (
                   <motion.button
@@ -311,7 +291,7 @@ export default function Page() {
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ delay: 0.4, type: "spring", stiffness: 300 }}
                     onClick={() => setEditingUsername(true)}
-                    className="group relative p-2 rounded-lg text-gray-400 hover:text-gray-300 hover:bg-gray-800/30 backdrop-blur-sm border border-transparent hover:border-gray-600/40 transition-all duration-300"
+                    className="group relative p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-white/5 backdrop-blur-sm border border-transparent hover:border-white/10 transition-all duration-300"
                     title="Edit username (100 coins)"
                   >
                     <svg
@@ -337,7 +317,7 @@ export default function Page() {
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: 0.3 }}
                   onClick={() => setEditingUsername(true)}
-                  className="group relative text-gray-400 text-lg mb-3 hover:text-gray-300 transition-all duration-300 px-4 py-2 rounded-lg hover:bg-gray-800/30 backdrop-blur-sm border border-transparent hover:border-gray-600/40"
+                  className="group relative text-neutral-400 text-lg mb-3 hover:text-white transition-all duration-300 px-4 py-2 rounded-lg hover:bg-white/5 border border-white/5 hover:border-white/10"
                 >
                   <span className="flex items-center gap-2">
                     Set Username
@@ -393,9 +373,8 @@ export default function Page() {
                           ? "Enter new username..."
                           : "Choose your username..."
                       }
-                      className="w-full p-3 rounded-xl border border-gray-700/50 bg-gray-900/40 backdrop-blur-sm text-gray-200 placeholder-gray-500 focus:border-gray-500/70 focus:ring-2 focus:ring-gray-600/20 focus:outline-none transition-all duration-300 hover:bg-gray-800/50"
+                      className="w-full p-3 rounded-xl border border-white/10 bg-neutral-900/50 backdrop-blur-sm text-white placeholder-neutral-500 focus:border-white/20 focus:ring-2 focus:ring-white/5 focus:outline-none transition-all duration-300 hover:bg-neutral-800/50"
                     />
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-gray-700/10 via-slate-600/10 to-gray-700/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
                   </div>
 
                   <div className="flex gap-2 w-full">
@@ -403,7 +382,7 @@ export default function Page() {
                       onClick={async () =>
                         changePlayerUserName(user.id, newUsername)
                       }
-                      className="flex-1 bg-gradient-to-r from-gray-700 to-gray-600 text-white p-3 rounded-xl hover:from-gray-600 hover:to-gray-500 transition-all duration-300 font-medium shadow-lg hover:shadow-gray-700/25 hover:scale-105 active:scale-95"
+                      className="flex-1 bg-white text-black p-3 rounded-xl hover:bg-neutral-200 transition-all duration-300 font-medium shadow-lg shadow-white/5 hover:scale-105 active:scale-95"
                     >
                       {playerState.username
                         ? "Change Username"
@@ -412,7 +391,7 @@ export default function Page() {
 
                     <button
                       onClick={() => setEditingUsername(false)}
-                      className="px-4 py-3 rounded-xl border border-gray-700/50 text-gray-400 hover:text-gray-300 hover:bg-gray-800/40 hover:border-gray-600/60 transition-all duration-300"
+                      className="px-4 py-3 rounded-xl border border-white/10 text-neutral-400 hover:text-white hover:bg-white/5 transition-all duration-300"
                     >
                       Cancel
                     </button>
@@ -422,20 +401,13 @@ export default function Page() {
             </div>
 
             {/* Coins Display */}
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.5, type: "spring" }}
-              className="bg-gradient-to-r from-amber-900/20 to-orange-900/20 rounded-2xl p-2 border border-amber-800/30"
-            >
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 text-3xl font-bold text-amber-500 mb-1">
-                  <PiCoins size={32} />
-                  <NumberCounting value={playerState?.coins || 0} />
-                </div>
-                {/* <p className="text-white-400 text-sm">Total Coins</p> */}
+            <div className="flex flex-col items-center lg:items-end gap-1">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xl shadow-[0_0_20px_rgba(245,158,11,0.1)]">
+                <PiCoins size={24} />
+                <NumberCounting value={playerState?.coins || 0} />
               </div>
-            </motion.div>
+              <span className="text-xs text-amber-500/40 uppercase tracking-widest font-semibold">Balance</span>
+            </div>
           </div>
         </motion.div>
 
@@ -447,59 +419,59 @@ export default function Page() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
         >
           {/* Total Games */}
-          <div className="bg-black/30 backdrop-blur-xl rounded-2xl border border-gray-700/30 p-6 hover:border-gray-600/50 transition-all duration-300 hover:scale-105">
+          <div className="bg-neutral-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-6 hover:bg-neutral-800/40 transition-all duration-300 group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-gray-700 to-slate-800 rounded-xl flex items-center justify-center">
-                <Gamepad2 className="text-gray-300" size={24} />
+              <div className="w-12 h-12 bg-neutral-800 rounded-xl flex items-center justify-center text-neutral-400 group-hover:text-white transition-colors">
+                <Gamepad2 size={24} />
               </div>
               <div>
-                <p className="text-3xl font-bold text-gray-200">
+                <p className="text-3xl font-bold text-white">
                   {playerState?.total_games}
                 </p>
-                <p className="text-gray-500 text-sm">Total Games</p>
+                <p className="text-slate-400 text-xs uppercase tracking-wider font-medium">Played</p>
               </div>
             </div>
           </div>
 
           {/* Wins */}
-          <div className="bg-black/30 backdrop-blur-xl rounded-2xl border border-gray-700/30 p-6 hover:border-gray-600/50 transition-all duration-300 hover:scale-105">
+          <div className="bg-neutral-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-6 hover:bg-neutral-800/40 transition-all duration-300 group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-green-800 to-emerald-900 rounded-xl flex items-center justify-center">
-                <Trophy className="text-green-400" size={24} />
+              <div className="w-12 h-12 bg-neutral-800 rounded-xl flex items-center justify-center text-emerald-500/80 group-hover:text-emerald-400 transition-colors">
+                <Trophy size={24} />
               </div>
               <div>
-                <p className="text-3xl font-bold text-gray-200">
+                <p className="text-3xl font-bold text-white">
                   {playerState?.wins}
                 </p>
-                <p className="text-gray-500 text-sm">Victories</p>
+                <p className="text-slate-400 text-xs uppercase tracking-wider font-medium">Won</p>
               </div>
             </div>
           </div>
 
           {/* Losses */}
-          <div className="bg-black/30 backdrop-blur-xl rounded-2xl border border-gray-700/30 p-6 hover:border-gray-600/50 transition-all duration-300 hover:scale-105">
+          <div className="bg-neutral-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-6 hover:bg-neutral-800/40 transition-all duration-300 group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-red-800 to-red-900 rounded-xl flex items-center justify-center">
-                <Target className="text-red-400" size={24} />
+              <div className="w-12 h-12 bg-neutral-800 rounded-xl flex items-center justify-center text-red-500/80 group-hover:text-red-400 transition-colors">
+                <Target size={24} />
               </div>
               <div>
-                <p className="text-3xl font-bold text-gray-200">
+                <p className="text-3xl font-bold text-white">
                   {playerState?.losses}
                 </p>
-                <p className="text-gray-500 text-sm">Defeats</p>
+                <p className="text-slate-400 text-xs uppercase tracking-wider font-medium">Lost</p>
               </div>
             </div>
           </div>
 
           {/* Win Rate */}
-          <div className="bg-black/30 backdrop-blur-xl rounded-2xl border border-gray-700/30 p-6 hover:border-gray-600/50 transition-all duration-300 hover:scale-105">
+          <div className="bg-neutral-900/40 backdrop-blur-md rounded-2xl border border-white/5 p-6 hover:bg-neutral-800/40 transition-all duration-300 group">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-800 to-purple-900 rounded-xl flex items-center justify-center">
-                <TrendingUp className="text-purple-400" size={24} />
+              <div className="w-12 h-12 bg-neutral-800 rounded-xl flex items-center justify-center text-neutral-400 group-hover:text-white transition-colors">
+                <TrendingUp size={24} />
               </div>
               <div>
-                <p className="text-3xl font-bold text-gray-200">{winRate}%</p>
-                <p className="text-gray-500 text-sm">Win Rate</p>
+                <p className="text-3xl font-bold text-white">{winRate}%</p>
+                <p className="text-slate-400 text-xs uppercase tracking-wider font-medium">Win Rate</p>
               </div>
             </div>
           </div>
@@ -509,24 +481,26 @@ export default function Page() {
         <motion.div
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.6 }}
-          className="bg-black/30 backdrop-blur-xl rounded-3xl border border-gray-700/30 shadow-2xl overflow-hidden"
+          transition={{ delay: 0.3, duration: 0.6 }}
+
+          className="bg-neutral-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden min-h-[500px]"
         >
           {/* Inventory Header */}
-          <div className="p-6 border-b border-gray-700/30">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="p-8 border-b border-white/5 bg-white/[0.01]">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
               <div>
-                <h2 className="text-3xl font-bold text-gray-200 mb-2">
-                  My Inventory
+                <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+                  My Collection
+                  <span className="text-sm font-normal text-slate-500 bg-white/5 px-2 py-1 rounded-full border border-white/5">{filteredInventory.length} Items</span>
                 </h2>
-                <p className="text-gray-500">
-                  Manage your collected items and achievements
+                <p className="text-slate-400">
+                  Customize your character and show off your achievements
                 </p>
               </div>
 
               <div className="flex items-center gap-4">
                 {/* Category Filter */}
-                <div className="flex items-center gap-2 bg-black/40 rounded-full p-1">
+                <div className="flex items-center gap-2 bg-black/40 rounded-full p-1 border border-white/5">
                   {categories.map((category) => {
                     const Icon =
                       category === "All" ? Filter : getCategoryIcon(category);
@@ -536,11 +510,10 @@ export default function Page() {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setSelectedCategory(category)}
-                        className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-all duration-300 ${
-                          selectedCategory === category
-                            ? "bg-gradient-to-r from-gray-700 to-slate-800 text-gray-200"
-                            : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
-                        }`}
+                        className={`px-4 py-2 rounded-full flex items-center gap-2 text-sm font-medium transition-all duration-300 ${selectedCategory === category
+                          ? "bg-white text-black shadow-lg shadow-white/10"
+                          : "text-neutral-500 hover:text-white hover:bg-white/5"
+                          }`}
                       >
                         <Icon size={16} />
                         {category}
@@ -550,24 +523,22 @@ export default function Page() {
                 </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center bg-black/40 rounded-full p-1">
+                <div className="flex items-center bg-black/40 rounded-full p-1 border border-white/5">
                   <button
                     onClick={() => setViewMode("grid")}
-                    className={`p-2 rounded-full transition-all duration-300 ${
-                      viewMode === "grid"
-                        ? "bg-gray-700 text-gray-200"
-                        : "text-gray-500 hover:text-gray-200"
-                    }`}
+                    className={`p-2 rounded-full transition-all duration-300 ${viewMode === "grid"
+                      ? "bg-white text-black shadow-lg shadow-white/10"
+                      : "text-neutral-500 hover:text-white"
+                      }`}
                   >
                     <Grid3X3 size={18} />
                   </button>
                   <button
                     onClick={() => setViewMode("list")}
-                    className={`p-2 rounded-full transition-all duration-300 ${
-                      viewMode === "list"
-                        ? "bg-gray-700 text-gray-200"
-                        : "text-gray-500 hover:text-gray-200"
-                    }`}
+                    className={`p-2 rounded-full transition-all duration-300 ${viewMode === "list"
+                      ? "bg-white text-black shadow-lg shadow-white/10"
+                      : "text-neutral-500 hover:text-white"
+                      }`}
                   >
                     <List size={18} />
                   </button>
@@ -582,7 +553,7 @@ export default function Page() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="flex flex-col items-center justify-center py-16 text-gray-500"
+                className="flex flex-col items-center justify-center py-16 text-neutral-500"
               >
                 <Package size={64} className="mb-4 opacity-50" />
                 <h3 className="text-xl font-semibold mb-2">No Items Found</h3>
@@ -607,150 +578,114 @@ export default function Page() {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.1 }}
-                      whileHover={{ y: -5, scale: 1.02 }}
-                      className={`group relative bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-800/50 hover:border-gray-700/50 transition-all duration-300 cursor-pointer ${getRarityGlow(
-                        item.store?.rarity
-                      )} ${
-                        viewMode === "list" ? "flex items-center p-4" : "p-4"
-                      }`}
+                      whileHover={{ y: -2 }}
+                      className={`group relative bg-neutral-900/40 hover:bg-neutral-800/60 backdrop-blur-sm rounded-xl overflow-hidden border border-white/5 hover:border-white/10 transition-all duration-200 cursor-pointer ${viewMode === "list" ? "flex items-center p-4 gap-4" : "p-4"
+                        }`}
                     >
-                      {/* Rarity Border */}
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-r ${getRarityColor(
-                          item.store?.rarity
-                        )} opacity-10 rounded-2xl`}
-                      />
 
                       {viewMode === "grid" ? (
                         <>
-                          {/* Item Content */}
-                          <div className="relative h-48 mb-4 rounded-xl overflow-hidden">
+                          {/* Item Media */}
+                          <div className="relative aspect-square mb-4 rounded-xl overflow-hidden bg-black/20">
                             {item.store?.category === "Sounds" ? (
-                              <div className="w-full h-full bg-gray-800 flex flex-col items-center justify-center text-gray-400">
-                                <CustomAudioPlayer
-                                  src={item.store?.item_url}
-                                  itemName={item.store?.item}
-                                />
+                              <div className="w-full h-full flex flex-col items-center justify-center text-slate-400">
+                                <Volume2 size={32} className="mb-2 opacity-50" />
+                                <div className="scale-75 origin-center w-full">
+                                  <CustomAudioPlayer
+                                    src={item.store?.item_url}
+                                    itemName={item.store?.item}
+                                  />
+                                </div>
                               </div>
                             ) : (
-                              <img
+                              <Image
                                 src={item.store?.item_url}
                                 alt={item.store?.item}
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                fill
+                                className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.parentNode.innerHTML = `<div class="w-full h-full flex items-center justify-center text-slate-600"><svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>`
+                                }}
                               />
                             )}
 
-                            {/* Rarity Badge */}
-                            <div
-                              className={`absolute top-3 right-3 px-2 py-1 bg-gradient-to-r ${getRarityColor(
-                                item.store?.rarity
-                              )} rounded-full text-gray-200 text-xs font-bold capitalize`}
-                            >
+                            <div className={`absolute top-2 right-2 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-black/40 text-white backdrop-blur-sm border border-white/10`}>
                               {item.store?.rarity}
                             </div>
                           </div>
 
-                          {/* Item Info */}
+                          {/* Item Details */}
                           <div className="relative z-10">
-                            <h3 className="text-gray-200 font-bold text-lg mb-2 group-hover:text-gray-100 transition-colors duration-300">
+                            <h3 className="text-white font-bold text-lg mb-1 truncate group-hover:text-neutral-300 transition-colors">
                               {item.store?.item}
                             </h3>
 
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="text-gray-500 text-sm capitalize">
-                                {item.store?.category}
-                              </span>
-                              {item?.store?.category === "Avatars" &&
-                                (item?.store?.item_url ===
+                            <div className="flex items-center justify-between mb-3 text-xs text-slate-400">
+                              <span className="capitalize">{item.store?.category}</span>
+                              <span>{new Date(item.bought_at).toLocaleDateString()}</span>
+                            </div>
+                            {item?.store?.category === "Avatars" &&
+                              (item?.store?.item_url ===
                                 playerState?.avatar ? (
-                                  <motion.button
-                                    disabled="true"
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => equipAvatar(item)}
-                                    className="px-3 py-1 bg-slate-800 hover:bg-amber-700 text-amber-200 text-sm rounded-md transition-colors"
-                                  >
-                                    Equiped
-                                  </motion.button>
-                                ) : (
-                                  <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => equipAvatar(item)}
-                                    className="px-3 py-1 bg-amber-800 hover:bg-amber-700 text-amber-200 text-sm rounded-md transition-colors"
-                                  >
-                                    Equip
-                                  </motion.button>
-                                ))}
-                            </div>
-
-                            <div className="text-gray-600 text-xs">
-                              Purchased{" "}
-                              {new Date(item.bought_at).toLocaleDateString()}
-                            </div>
+                                <button
+                                  disabled
+                                  className="w-full py-2 bg-neutral-800 text-neutral-400 text-sm rounded-lg font-medium border border-white/5"
+                                >
+                                  Equipped
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    equipAvatar(item);
+                                  }}
+                                  className="w-full py-2 bg-white text-black hover:bg-neutral-200 text-sm rounded-lg font-medium transition-colors"
+                                >
+                                  Equip
+                                </button>
+                              ))}
                           </div>
                         </>
                       ) : (
                         <>
                           {/* List View */}
-                          {item.store?.category === "Sounds" ? (
-                            <div className="w-16 h-16 bg-gray-800 rounded-xl flex items-center justify-center">
-                              <Volume2 size={24} className="text-gray-500" />
-                            </div>
-                          ) : (
-                            <img
-                              src={item.store?.item_url}
-                              alt={item.store?.item}
-                              className="w-16 h-16 object-cover rounded-xl"
-                            />
-                          )}
+                          <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-black/20 flex-shrink-0">
+                            {item.store?.category === "Sounds" ? (
+                              <div className="w-full h-full flex items-center justify-center text-slate-500">
+                                <Volume2 size={24} />
+                              </div>
+                            ) : (
+                              <Image
+                                src={item.store?.item_url}
+                                alt={item.store?.item}
+                                fill
+                                className="object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.parentNode.innerHTML = `<div class="w-full h-full flex items-center justify-center text-slate-600"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></div>`
+                                }}
+                              />
+                            )}
+                          </div>
 
-                          <div className="flex-1 ml-4">
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                              <h3 className="text-gray-200 font-bold text-lg">
-                                {item.store?.item}
-                              </h3>
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`px-2 py-1 bg-gradient-to-r ${getRarityColor(
-                                    item.store?.rarity
-                                  )} rounded-full text-gray-200 text-xs font-bold capitalize`}
-                                >
-                                  {item.store?.rarity}
-                                </div>
-                                <ArrowRight
-                                  className="text-gray-500 group-hover:text-gray-300 transition-colors"
-                                  size={20}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-gray-500 text-sm capitalize">
-                                {item.store?.category}
+                              <h4 className="text-white font-bold text-lg truncate">{item.store?.item}</h4>
+                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-white/5 text-slate-300 border border-white/5`}>
+                                {item.store?.rarity}
                               </span>
-                              <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-1 text-amber-500 font-bold">
-                                  <PiCoins size={16} />
-                                  <span>{item.store?.price}</span>
-                                </div>
-                                <span className="text-gray-600 text-xs">
-                                  {new Date(
-                                    item.bought_at
-                                  ).toLocaleDateString()}
-                                </span>
-                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                              <span className="capitalize">{item.store?.category}</span>
+                              <span>•</span>
+                              <span>Purchased {new Date(item.bought_at).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </>
                       )}
 
-                      {/* Hover Glow Effect */}
-                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-                        <div
-                          className={`absolute inset-0 bg-gradient-to-r ${getRarityColor(
-                            item.store?.rarity
-                          )} opacity-5 rounded-2xl`}
-                        />
-                      </div>
+
                     </motion.div>
                   ))}
                 </motion.div>
@@ -758,7 +693,7 @@ export default function Page() {
             )}
           </div>
         </motion.div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
