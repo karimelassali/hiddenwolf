@@ -426,7 +426,7 @@ export default function Page() {
 }
 
 
-export function PurchaseConfirming({
+function PurchaseConfirming({
   chosedItem,
   currentPlayerCoins,
   oncClose,
