@@ -1,7 +1,7 @@
 "use client";
 
 import { supabase } from "@/lib/supabase";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -25,6 +25,12 @@ import {
   Play,
   Pause,
   Edit2,
+  Clock,
+  ChevronDown,
+  Shield,
+  Swords,
+  Users,
+  History,
 } from "lucide-react";
 import { PiCoins } from "react-icons/pi";
 import Image from "next/image";
@@ -43,7 +49,12 @@ export default function Page() {
   const { isLoaded, user } = useUser();
   const [editingUsername, setEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState("");
+  const [gameHistory, setGameHistory] = useState([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [hasMoreHistory, setHasMoreHistory] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const router = useRouter();
+  const HISTORY_PAGE_SIZE = 10;
 
   const fetchUserState = async (playerId) => {
     const { data, error } = await supabase
@@ -87,10 +98,41 @@ export default function Page() {
     setPlayerInventory(uniquePurchases);
   };
 
+  const fetchGameHistory = useCallback(async (playerId, page = 0, append = false) => {
+    setLoadingHistory(true);
+    const from = page * HISTORY_PAGE_SIZE;
+    const to = from + HISTORY_PAGE_SIZE - 1;
+
+    const { data, error } = await supabase
+      .from("game_history")
+      .select("*")
+      .eq("player_id", playerId)
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      console.error("Error fetching game history:", error.message);
+      setLoadingHistory(false);
+      return;
+    }
+
+    if (data.length < HISTORY_PAGE_SIZE) {
+      setHasMoreHistory(false);
+    }
+
+    if (append) {
+      setGameHistory(prev => [...prev, ...data]);
+    } else {
+      setGameHistory(data);
+    }
+    setLoadingHistory(false);
+  }, []);
+
   useEffect(() => {
     if (isLoaded && user) {
       fetchUserState(user.id);
       fetchUserInventory(user?.id);
+      fetchGameHistory(user.id, 0);
     }
   }, [isLoaded, user]);
 
@@ -738,6 +780,155 @@ export default function Page() {
             )}
           </div>
         </motion.div>
+
+        {/* Game History Section */}
+        <motion.div
+          initial={{ y: 50, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          className="bg-neutral-900/40 backdrop-blur-xl rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden"
+        >
+          {/* History Header */}
+          <div className="p-8 border-b border-white/5 bg-white/[0.01]">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+                  <History size={28} className="text-purple-400" />
+                  Match History
+                  <span className="text-sm font-normal text-slate-500 bg-white/5 px-2 py-1 rounded-full border border-white/5">
+                    {gameHistory.length}{hasMoreHistory ? '+' : ''} Games
+                  </span>
+                </h2>
+                <p className="text-slate-400">Review your past battles and track your progress</p>
+              </div>
+            </div>
+          </div>
+
+          {/* History List */}
+          <div className="p-6 space-y-3">
+            {gameHistory.length === 0 && !loadingHistory ? (
+              <div className="flex flex-col items-center justify-center py-16 text-neutral-500">
+                <Swords size={48} className="mb-4 opacity-50" />
+                <h3 className="text-xl font-semibold mb-2">No Games Yet</h3>
+                <p>Play some games and your history will appear here.</p>
+              </div>
+            ) : (
+              <>
+                {gameHistory.map((game, index) => {
+                  const isWin = game.result === 'win';
+                  const roleIcons = {
+                    wolf: '🐺',
+                    seer: '🔮',
+                    doctor: '🩺',
+                    villager: '🧑‍🌾',
+                  };
+                  const roleIcon = roleIcons[game.role] || '❓';
+
+                  return (
+                    <motion.div
+                      key={game.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={`group relative flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.01] ${isWin
+                        ? 'bg-emerald-950/20 border-emerald-900/30 hover:border-emerald-800/50'
+                        : 'bg-red-950/20 border-red-900/30 hover:border-red-800/50'
+                        }`}
+                    >
+                      {/* Result Badge */}
+                      <div className={`w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 text-2xl font-black ${isWin
+                        ? 'bg-emerald-900/30 text-emerald-400'
+                        : 'bg-red-900/30 text-red-400'
+                        }`}>
+                        {isWin ? <Trophy size={24} /> : <Target size={24} />}
+                      </div>
+
+                      {/* Game Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`font-bold text-lg ${isWin ? 'text-emerald-300' : 'text-red-300'
+                            }`}>
+                            {isWin ? 'Victory' : 'Defeat'}
+                          </span>
+                          <span className="text-xl" title={game.role}>{roleIcon}</span>
+                          <span className="text-xs text-neutral-500 capitalize bg-white/5 px-2 py-0.5 rounded-lg border border-white/5">
+                            {game.role}
+                          </span>
+                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg border ${game.team === 'wolves'
+                            ? 'bg-red-950/30 border-red-900/30 text-red-400'
+                            : 'bg-blue-950/30 border-blue-900/30 text-blue-400'
+                            }`}>
+                            {game.team}
+                          </span>
+                          {game.survived && (
+                            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-lg border bg-emerald-950/30 border-emerald-900/30 text-emerald-400">
+                              <Shield size={10} className="inline mr-1" />
+                              Survived
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-neutral-500">
+                          <span className="flex items-center gap-1">
+                            <Clock size={12} />
+                            {new Date(game.created_at).toLocaleDateString(undefined, {
+                              month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                            })}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users size={12} />
+                            {game.player_count} players
+                          </span>
+                          <span>{game.rounds} round{game.rounds !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+
+                      {/* Rewards */}
+                      <div className="flex items-center gap-3 flex-shrink-0">
+                        {game.xp_earned > 0 && (
+                          <div className="flex items-center gap-1 text-purple-400 font-bold text-sm bg-purple-900/20 px-2.5 py-1 rounded-lg border border-purple-900/30">
+                            <TrendingUp size={14} />
+                            +{game.xp_earned} XP
+                          </div>
+                        )}
+                        {game.coins_earned > 0 && (
+                          <div className="flex items-center gap-1 text-amber-400 font-bold text-sm bg-amber-900/20 px-2.5 py-1 rounded-lg border border-amber-900/30">
+                            <PiCoins size={14} />
+                            +{game.coins_earned}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+
+                {/* Load More */}
+                {hasMoreHistory && (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      const nextPage = historyPage + 1;
+                      setHistoryPage(nextPage);
+                      fetchGameHistory(user.id, nextPage, true);
+                    }}
+                    disabled={loadingHistory}
+                    className="w-full py-4 mt-4 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-neutral-400 hover:text-white transition-all duration-300 flex items-center justify-center gap-2 font-medium disabled:opacity-50"
+                  >
+                    {loadingHistory ? (
+                      <div className="w-5 h-5 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <ChevronDown size={18} />
+                        Load More Games
+                      </>
+                    )}
+                  </motion.button>
+                )}
+              </>
+            )}
+          </div>
+        </motion.div>
+
       </div >
     </div >
   );

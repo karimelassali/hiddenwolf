@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { FaTrophy, FaSkull, FaCrown, FaHome, FaUsers, FaArrowUp, FaChevronRight } from "react-icons/fa";
 import { updatePlayerState } from "@/utils/updatePlayerState";
+import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { WinSound, LoseSound } from "@/utils/sounds";
@@ -14,6 +15,9 @@ export default function GameWinner({
   clerkId,
   currentPlayerRole,
   currentPlayerAlive,
+  roomCode,
+  rounds,
+  playerCount,
 }) {
   const isWolfWin = winner?.role?.toLowerCase().includes("wolf");
   const [playerStateUpdated, setPlayerStateUpdated] = useState(false);
@@ -55,6 +59,24 @@ export default function GameWinner({
           if (result.leveledUp) {
             setTimeout(() => setShowLevelUp(true), 1500);
           }
+        }
+
+        // Record game history
+        try {
+          await supabase.from("game_history").insert({
+            player_id: clerkId,
+            room_code: roomCode || "unknown",
+            role: currentPlayerRole,
+            team: currentPlayerRole === "wolf" ? "wolves" : "villagers",
+            result: isCurrentUserWon ? "win" : "loss",
+            survived: !!currentPlayerAlive,
+            xp_earned: result?.xpGained || 0,
+            coins_earned: isCurrentUserWon ? randomPrize : 0,
+            player_count: playerCount || (winner.players.length + winner.enemy.length),
+            rounds: rounds || 1,
+          });
+        } catch (historyError) {
+          console.warn("Failed to record game history:", historyError);
         }
 
         setPlayerStateUpdated(true);

@@ -1,10 +1,8 @@
 import { supabase } from "@/lib/supabase";
-// Correctly import React and its hooks
-import React, { useState, useEffect, useRef } from "react"; 
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Notification } from "@/utils/sounds";
-// Consolidate react-icons imports and add the missing FaSkull
-import { FaPaperPlane, FaComments, FaSkull } from 'react-icons/fa'; 
+import { FaPaperPlane, FaComments, FaSkull, FaRobot, FaExclamationTriangle } from 'react-icons/fa';
 
 export default function PlayersChat({
   roomID,
@@ -15,8 +13,8 @@ export default function PlayersChat({
 }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
-  // Now you can use useRef directly or as React.useRef because React is correctly imported
-  const messagesEndRef = useRef(null); 
+  const [typingUsers, setTypingUsers] = useState(new Set());
+  const messagesEndRef = useRef(null);
 
   const fetchMessages = async () => {
     const { data: messages, error } = await supabase
@@ -49,17 +47,44 @@ export default function PlayersChat({
   useEffect(() => {
     if (roomID) {
       fetchMessages();
-      const cleanup = playersChatRealTimeListening(roomID, fetchMessages);
+
+      const channel = supabase.channel(`room_${roomID}`);
+
+      const cleanup = playersChatRealTimeListening(channel, roomID, fetchMessages, (payload) => {
+        // Handle broadcast events (typing)
+        if (payload.type === 'broadcast' && payload.event === 'typing') {
+          const { user, isTyping } = payload.payload;
+          setTypingUsers(prev => {
+            const next = new Set(prev);
+            if (isTyping) next.add(user);
+            else next.delete(user);
+            return next;
+          });
+
+          // Auto-clear typing status after 5 seconds just in case
+          if (isTyping) {
+            setTimeout(() => {
+              setTypingUsers(prev => {
+                const next = new Set(prev);
+                next.delete(user);
+                return next;
+              });
+            }, 5000);
+          }
+        }
+      });
+
       return () => {
         cleanup();
+        supabase.removeChannel(channel);
       };
     }
   }, [roomID]);
-  
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, typingUsers]);
 
 
   return (
@@ -78,7 +103,7 @@ export default function PlayersChat({
             </div>
             <span>Village Chat</span>
           </h3>
-          
+
           {/* Online indicator */}
           <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-400">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -105,10 +130,22 @@ export default function PlayersChat({
           const isMe = message.player_id === playerID;
           const prevMessage = messages[index - 1];
           const showAvatar = !prevMessage || prevMessage.player_id !== message.player_id;
-          
+
+          let content = message.message;
+          let isAI = false;
+          let isFallback = false;
+
+          if (content.endsWith(" [AI]")) {
+            isAI = true;
+            content = content.replace(" [AI]", "");
+          } else if (content.endsWith(" [FB]")) {
+            isFallback = true;
+            content = content.replace(" [FB]", "");
+          }
+
           return (
-            <motion.div 
-              key={message.id} 
+            <motion.div
+              key={message.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
@@ -127,18 +164,17 @@ export default function PlayersChat({
 
               {/* Message content */}
               <div className={`flex flex-col max-w-[75%] sm:max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
-                {/* Sender info (only show if new sender or significant time gap) */}
+                {/* Sender info */}
                 {showAvatar && (
                   <div className={`flex items-center gap-2 mb-1 text-xs ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <span className={`font-medium ${
-                      isMe ? 'text-purple-300' : 'text-amber-300'
-                    }`}>
+                    <span className={`font-medium ${isMe ? 'text-purple-300' : 'text-amber-300'
+                      }`}>
                       {isMe ? 'You' : message.player_name}
                     </span>
                     <span className="text-slate-500">
-                      {new Date(message.created_at).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {new Date(message.created_at).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit'
                       })}
                     </span>
                   </div>
@@ -146,40 +182,67 @@ export default function PlayersChat({
 
                 {/* Message bubble */}
                 <div
-                  className={`relative px-3 py-2 sm:px-4 sm:py-3 rounded-2xl break-words shadow-lg transition-all duration-200 hover:shadow-xl ${
-                    isMe 
-                      ? "bg-gradient-to-br from-purple-600 to-purple-700 text-white rounded-br-md" 
+                  className={`relative px-3 py-2 sm:px-4 sm:py-3 rounded-2xl break-words shadow-lg transition-all duration-200 hover:shadow-xl ${isMe
+                      ? "bg-gradient-to-br from-purple-600 to-purple-700 text-white rounded-br-md"
                       : "bg-gradient-to-br from-slate-700 to-slate-800 text-slate-100 rounded-bl-md border border-slate-600/50"
-                  }`}
+                    }`}
                 >
-                  <p className="text-sm sm:text-base leading-relaxed">{message.message}</p>
-                  
+                  <p className="text-sm sm:text-base leading-relaxed">{content}</p>
+
+                  {/* Debug Indicators */}
+                  {(isAI || isFallback) && (
+                    <div className="absolute -top-2 -right-2 flex gap-1">
+                      {isAI && (
+                        <div title="Generated by AI" className="bg-blue-500 text-[10px] text-white px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm border border-blue-400">
+                          <FaRobot /> AI
+                        </div>
+                      )}
+                      {isFallback && (
+                        <div title="Static Fallback" className="bg-orange-500 text-[10px] text-white px-1.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm border border-orange-400">
+                          <FaExclamationTriangle /> FB
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Message tail */}
-                  <div className={`absolute bottom-0 w-3 h-3 ${
-                    isMe 
-                      ? "right-0 bg-purple-700 rounded-tl-full" 
+                  <div className={`absolute bottom-0 w-3 h-3 ${isMe
+                      ? "right-0 bg-purple-700 rounded-tl-full"
                       : "left-0 bg-slate-800 rounded-tr-full border-l border-t border-slate-600/50"
-                  }`} style={{
-                    clipPath: isMe 
-                      ? 'polygon(0 0, 100% 0, 0 100%)' 
-                      : 'polygon(100% 0, 100% 100%, 0 0)'
-                  }} />
+                    }`} style={{
+                      clipPath: isMe
+                        ? 'polygon(0 0, 100% 0, 0 100%)'
+                        : 'polygon(100% 0, 100% 100%, 0 0)'
+                    }} />
                 </div>
               </div>
             </motion.div>
           );
         })}
-        
+
+        {/* Typing Indicators */}
+        <AnimatePresence>
+          {Array.from(typingUsers).map(user => (
+            <motion.div
+              key={user}
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 5 }}
+              className="flex items-center gap-2 text-xs text-slate-400 ml-10"
+            >
+              <div className="flex gap-1">
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+              </div>
+              <span>{user} is typing...</span>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+
         {/* Auto-scroll anchor */}
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Typing indicator (optional - if you have typing state) */}
-      {/* {isTyping && (
-        <div className="px-4 py-2 text-xs text-slate-400">
-          <span className="animate-pulse">Someone is typing...</span>
-        </div>
-      )} */}
 
       {/* Message input area */}
       <div className="flex-shrink-0 bg-slate-900/70 border-t border-slate-700/50">
@@ -200,7 +263,7 @@ export default function PlayersChat({
               placeholder={is_alive ? "Type your message..." : "You are eliminated from the game"}
               disabled={!is_alive}
             />
-            
+
             {/* Character counter */}
             {newMessage.length > 400 && (
               <div className="absolute -top-6 right-2 text-xs text-slate-400">
@@ -208,19 +271,18 @@ export default function PlayersChat({
               </div>
             )}
           </div>
-          
+
           <button
             onClick={sendMessage}
             disabled={!is_alive || !newMessage.trim()}
             className="p-2 sm:p-3 bg-gradient-to-br from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:from-slate-600 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-full transition-all duration-200 hover:shadow-lg disabled:shadow-none group"
             title={!is_alive ? "You cannot chat while eliminated" : "Send message"}
           >
-            <FaPaperPlane className={`text-sm sm:text-base transition-transform ${
-              !is_alive || !newMessage.trim() ? '' : 'group-hover:translate-x-0.5'
-            }`} />
+            <FaPaperPlane className={`text-sm sm:text-base transition-transform ${!is_alive || !newMessage.trim() ? '' : 'group-hover:translate-x-0.5'
+              }`} />
           </button>
         </div>
-        
+
         {/* Status bar */}
         {!is_alive && (
           <div className="px-3 py-2 bg-red-900/20 border-t border-red-800/30">
@@ -268,10 +330,9 @@ export default function PlayersChat({
   );
 }
 
-// --- LOGIC REMAINS UNTOUCHED ---
-function playersChatRealTimeListening(roomId, fetchMessages) {
-  const subscription = supabase
-    .channel("players_chat_listening_channel")
+// Updated listening function to handle broadcast events
+function playersChatRealTimeListening(channel, roomId, fetchMessages, onBroadcast) {
+  const subscription = channel
     .on(
       "postgres_changes",
       { event: "*", schema: "public", table: "chat_messages", filter: `room_id=eq.${roomId}` },
@@ -280,7 +341,15 @@ function playersChatRealTimeListening(roomId, fetchMessages) {
         Notification();
       }
     )
+    .on(
+      "broadcast",
+      { event: "typing" },
+      (payload) => {
+        onBroadcast(payload);
+      }
+    )
     .subscribe();
+
   return () => {
     subscription.unsubscribe();
   };

@@ -31,7 +31,8 @@ import {
   seePlayer,
   savePlayer,
   voting,
-  messaging,
+  getAIVoteTarget,
+  botConversation,
 } from "@/utils/botsActions";
 import { trackUserConnectivity } from "@/utils/trackUserconnectivity";
 import { HowlSound, HeavyPainSound } from "@/utils/sounds";
@@ -337,8 +338,12 @@ export default function Game({ params }) {
 
       try {
         if (roomData.stage === "day") {
-          await voting(bot, randomTarget);
-          await messaging(bot, roomData.id, currentPlayers, randomTarget);
+          // AI picks the vote target
+          const aiTarget = await getAIVoteTarget(bot, alivePlayers);
+          const finalDayTarget = aiTarget || randomTarget;
+          await voting(bot, finalDayTarget);
+          // Bot sends 1-3 messages with delays
+          botConversation(bot, roomData.id, currentPlayers, finalDayTarget);
         } else if (roomData.stage === "night") {
           // --- Timer: Doctor/Seer act early, Wolf acts after them ---
           const OTHER_BOT_DELAY = Math.floor(Math.random() * 3000) + 2000; // 2-5s
@@ -890,6 +895,9 @@ export default function Game({ params }) {
           clerkId={user?.id}
           currentPlayerRole={currentPlayer?.role}
           currentPlayerAlive={currentPlayer?.is_alive}
+          roomCode={uid}
+          rounds={roomData?.round || 1}
+          playerCount={players.length}
         />
       )}
 

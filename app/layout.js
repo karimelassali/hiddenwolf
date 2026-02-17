@@ -10,7 +10,7 @@ import {
 } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 
-const Navbar = dynamic(() => import("@/components/navbar"));
+const Navbar = dynamic(() => import("../components/navbar"));
 
 
 
