@@ -413,7 +413,7 @@ export default function Page() {
       {/* Confirmation Modal */}
       <AnimatePresence>
         {chosedItem && (
-          <PurchaseConfirming
+          <_PurchaseConfirmModal
             chosedItem={chosedItem}
             currentPlayerCoins={playerState?.coins || 0}
             oncClose={() => setChosedItem(null)}
@@ -426,7 +426,7 @@ export default function Page() {
 }
 
 
-function PurchaseConfirming({
+function _PurchaseConfirmModal({
   chosedItem,
   currentPlayerCoins,
   oncClose,
