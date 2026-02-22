@@ -135,6 +135,8 @@ export default function PlayersChat({
           let isAI = false;
           let isFallback = false;
 
+
+          
           if (content.endsWith(" [AI]")) {
             isAI = true;
             content = content.replace(" [AI]", "");
