@@ -37,6 +37,14 @@ body {
   --font-karla: 'Karla', sans-serif;
   --font-luckiest: 'Luckiest Guy', cursive; /* for names */
 
+  --font-weight-thin: 200;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
