@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 // --- Import Core Libraries from React & Next.js ---
 import React, { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
@@ -39,7 +41,7 @@ export default function Room({ params }) {
 
   // --- Helper Functions ---
   const upsertPlayer = async (roomId, currentUser) => {
-    if (!currentUser || !roomId) return;
+    if (!supabase || !currentUser || !roomId) return;
     try {
       const { data: playerStat } = await supabase
         .from("player_stats")
@@ -65,7 +67,7 @@ export default function Room({ params }) {
 
   // --- useEffect Hooks ---
   useEffect(() => {
-    if (!uid) return;
+    if (!uid || !supabase) return;
 
     const initializeRoom = async () => {
       setIsLoading(true);
@@ -99,7 +101,7 @@ export default function Room({ params }) {
 
   // Real-time subscriptions
   useEffect(() => {
-    if (!roomData?.id) return;
+    if (!roomData?.id || !supabase) return;
 
     const playersChannel = supabase
       .channel(`room-players-${roomData.id}`)

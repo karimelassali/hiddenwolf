@@ -17,6 +17,7 @@ export default function PlayersChat({
   const messagesEndRef = useRef(null);
 
   const fetchMessages = async () => {
+    if (!supabase) return;
     const { data: messages, error } = await supabase
       .from("chat_messages")
       .select("*")
@@ -29,7 +30,7 @@ export default function PlayersChat({
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !is_alive) return;
+    if (!supabase || !newMessage.trim() || !is_alive) return;
     const { error } = await supabase.from("chat_messages").insert({
       room_id: roomID,
       player_id: playerID,
@@ -45,7 +46,7 @@ export default function PlayersChat({
   };
 
   useEffect(() => {
-    if (roomID) {
+    if (roomID && supabase) {
       fetchMessages();
 
       const channel = supabase.channel(`room_${roomID}`);

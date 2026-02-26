@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 // --- Import Core Libraries ---
 import React, { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
@@ -119,7 +121,7 @@ export default function Game({ params }) {
   }, []);
 
   const upsertPlayer = async (roomId, currentUser) => {
-    if (!currentUser || !roomId) return;
+    if (!supabase || !currentUser || !roomId) return;
     try {
       const { data: playerStat } = await supabase
         .from("player_stats")
@@ -145,6 +147,7 @@ export default function Game({ params }) {
   // --- Data Fetching and Initialization ---
   useEffect(() => {
     const initializeGame = async () => {
+      if (!supabase) return;
       try {
         const { data: room, error: roomError } = await supabase
           .from("rooms")
@@ -210,7 +213,7 @@ export default function Game({ params }) {
 
   // --- Real-time Subscriptions ---
   useEffect(() => {
-    if (!roomData?.id) return;
+    if (!roomData?.id || !supabase) return;
 
     const playersSubscription = supabase
       .channel(`game-players-${roomData.id}`)

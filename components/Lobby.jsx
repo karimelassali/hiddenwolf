@@ -45,7 +45,7 @@ export default function Lobby({ user }) {
 
     const checkIfPlayerRegistred = async (currentUser) => {
         try {
-            if (currentUser?.id) {
+            if (currentUser?.id && supabase) {
                 const { data: existingData, error: fetchError } = await supabase
                     .from("player_stats")
                     .select("player_id")
@@ -84,6 +84,7 @@ export default function Lobby({ user }) {
     };
 
     const fetchPlayerDetails = async (currentUser) => {
+        if (!supabase) return;
         // Clean up any stale player rows (fire and forget)
         await supabase.from("players").delete().eq("player_id", currentUser.id);
         const { data, error } = await supabase
@@ -105,7 +106,7 @@ export default function Lobby({ user }) {
     };
 
     useEffect(() => {
-        if (user) {
+        if (user && supabase) {
             const initUser = async () => {
                 await checkIfPlayerRegistred(user);
                 await fetchPlayerDetails(user);

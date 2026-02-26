@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 // Remove async from the exported function so it returns the interval ID synchronously
 export function trackUserConnectivity(roomId, userId, roomHosterId) {
   const interval = setInterval(async () => {
+    if (!supabase) return;
     // ✅ Update last seen for current user
     await supabase
       .from('players')

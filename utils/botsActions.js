@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 // --- Night Actions ---
 
 export async function kill(wolf, target, roomId) {
+  if (!supabase) return;
   if (
     !wolf ||
     !target ||
@@ -24,7 +25,7 @@ export async function kill(wolf, target, roomId) {
 }
 
 export async function seePlayer(seer, target) {
-  if (!seer || !target || seer.role !== "seer" || seer.is_action_done) return;
+  if (!supabase || !seer || !target || seer.role !== "seer" || seer.is_action_done) return;
 
   await supabase
     .from("players")
@@ -33,7 +34,7 @@ export async function seePlayer(seer, target) {
 }
 
 export async function savePlayer(doctor, target) {
-  if (!doctor || !target || doctor.role !== "doctor" || doctor.is_action_done)
+  if (!supabase || !doctor || !target || doctor.role !== "doctor" || doctor.is_action_done)
     return;
 
   await supabase.from("players").update({ is_saved: true }).eq("id", target.id);
@@ -46,6 +47,7 @@ export async function savePlayer(doctor, target) {
 // --- Day Actions ---
 
 export async function voting(voter, target) {
+  if (!supabase) return;
   console.log('im ' + voter.name + ' voting for ' + target.name);
 
   await supabase
@@ -162,6 +164,7 @@ const getFallbackMessage = (bot, targetOfVote, isFollowUp = false) => {
 // --- Single Message Helper ---
 
 async function sendBotMessage(bot, roomId, targetOfVote, isFollowUp = false, previousMessage = "") {
+  if (!supabase) return "";
   let channel = null;
 
   try {
