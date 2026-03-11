@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 // --- Import Core Libraries from React & Next.js ---
 import React, { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
